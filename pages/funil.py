@@ -518,23 +518,25 @@ with aba4:
 
 # ── Aba 5: Base Analítica ─────────────────────────────────────────────────────
 with aba5:
-    st.subheader("Matriz de Leads (Cidade ➔ Etapa ➔ Produto ➔ Responsável ➔ Lead)")
+    st.subheader("Matriz de Leads (Cidade ➔ Produto ➔ Responsável ➔ Lead)")
     
-    # Prepara dados para a matriz com 5 níveis
+    # Prepara dados para a matriz com 4 níveis na hierarquia
     df_mat = df_filtrado.copy()
     df_mat["Cidade"] = df_mat["Cidade"].fillna("Não Informado").astype(str).str.strip().replace({"": "Não Informado"})
     df_mat["Etapa_NF"] = df_mat["Etapa_NF"].fillna("Outros").astype(str).str.strip().replace({"": "Outros"})
     df_mat["Produto"] = df_mat["Produto"].fillna("Não Informado").astype(str).str.strip().replace({"": "Não Informado"})
     df_mat["Responsavel"] = df_mat["Responsavel"].fillna("Sem Responsável").astype(str).str.strip().replace({"": "Sem Responsável"})
     df_mat["Nome"] = df_mat["Nome"].fillna("Sem Nome").astype(str).str.strip().replace({"": "Sem Nome"})
+    df_mat["UtmSource"] = _resolver_origem(df_mat)
     
     df_mat["Leads"] = 1
     df_mat["TempoTotal"] = pd.to_numeric(df_mat["TempoTotal"], errors="coerce").fillna(0.0)
     df_mat["Leads_Com_Tempo"] = (df_filtrado["TempoTotal"].notna() & (df_filtrado["TempoTotal"] > 0)).astype(int)
     
     col_specs_funil = [
-        {"header": "Hierarquia (Cidade ➔ Etapa ➔ Produto ➔ Responsável ➔ Lead)", "key": "name"},
+        {"header": "Hierarquia (Cidade ➔ Produto ➔ Responsável ➔ Lead)", "key": "name"},
         {"header": "Leads", "key": "Leads", "dec": 0},
+        {"header": "Etapa", "key": "Etapa_NF", "is_text": True},
         {"header": "Tempo (dias)", "key": "TempoTotal", "is_text": True},
         {"header": "Responsável", "key": "Responsavel", "is_text": True},
         {"header": "Origem (Canais)", "key": "UtmSource", "is_text": True},
@@ -558,17 +560,20 @@ with aba5:
             origem = row.get("UtmSource", "—")
             tempo = row.get("TempoTotal", "—")
             forma = row.get("FormaCadastro", "—")
+            etapa = row.get("Etapa_NF", "—")
             
             resp = resp if pd.notna(resp) and str(resp).strip() != "" else "—"
             origem = origem if pd.notna(origem) and str(origem).strip() != "" else "—"
             tempo = f"{int(tempo)} dias" if pd.notna(tempo) and float(tempo) > 0 else "—"
             forma = forma if pd.notna(forma) and str(forma).strip() != "" else "—"
+            etapa_badge = _badge_html(etapa) if etapa != "—" else "—"
             
             return {
                 "Responsavel": resp,
                 "UtmSource": origem,
                 "TempoTotal": tempo,
                 "FormaCadastro": forma,
+                "Etapa_NF": etapa_badge,
                 "Leads": 1
             }
         else:
@@ -583,6 +588,7 @@ with aba5:
                 "UtmSource": "—",
                 "TempoTotal": tempo_str,
                 "FormaCadastro": "—",
+                "Etapa_NF": "—",
                 "Leads": agg.get("Leads", 0)
             }
             
@@ -596,11 +602,11 @@ with aba5:
         
     tabela_matriz_html(
         df=df_mat,
-        group_cols=["Cidade", "Etapa_NF", "Produto", "Responsavel", "Nome"],
+        group_cols=["Cidade", "Produto", "Responsavel", "Nome"],
         col_specs=col_specs_funil,
         agg_rules=agg_rules_funil,
         derived_func=derived_funil,
-        grid_template="minmax(380px, 3.5fr) 0.8fr 1.2fr 1.5fr 1fr 1.3fr",
+        grid_template="minmax(380px, 3.5fr) 0.8fr 1.3fr 1.2fr 1.5fr 1fr 1.3fr",
         active_campaigns=None,
         key="funil_matrix_hierarquia",
         df_download=df_download,
