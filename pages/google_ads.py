@@ -80,7 +80,13 @@ sel_cidade = st.sidebar.multiselect("Cidade", cidades_opts, placeholder="Todas")
 if sel_cidade:
     df = df[df["Cidade"].isin(sel_cidade) | (df["Cidade"] == "Não identificado") | df["Cidade"].isna()]
 
-# 6. Status da campanha
+# 6. Campanha
+campanhas_opts = sorted(df["campaign_name"].dropna().unique())
+sel_campanha = st.sidebar.multiselect("Campanha", campanhas_opts, placeholder="Todas")
+if sel_campanha:
+    df = df[df["campaign_name"].isin(sel_campanha)]
+
+# 7. Status da campanha
 sel_status = st.sidebar.selectbox("Status da campanha", ["Todas", "Ativas", "Inativas"])
 if sel_status == "Ativas":
     df = df[df["campaign_name"].isin(active_campaigns_gads)]
