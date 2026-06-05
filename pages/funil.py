@@ -116,6 +116,41 @@ def _badge_html(etapa: str) -> str:
         f'<span class="pub-badge-dot" style="background:{color}"></span>{etapa}</span>'
     )
 
+def _obter_estado_ddd(tel) -> str:
+    if not tel or pd.isna(tel):
+        return "Não Informado"
+    digits = "".join(filter(str.isdigit, str(tel)))
+    if len(digits) >= 12 and digits.startswith("55"):
+        ddd = digits[2:4]
+    elif len(digits) in (10, 11):
+        ddd = digits[0:2]
+    elif len(digits) >= 2:
+        ddd = digits[0:2]
+    else:
+        return "Não Informado"
+    
+    DDD_TO_STATE = {
+        '11': 'SP', '12': 'SP', '13': 'SP', '14': 'SP', '15': 'SP', '16': 'SP', '17': 'SP', '18': 'SP', '19': 'SP',
+        '21': 'RJ', '22': 'RJ', '24': 'RJ',
+        '27': 'ES', '28': 'ES',
+        '31': 'MG', '32': 'MG', '33': 'MG', '34': 'MG', '35': 'MG', '37': 'MG', '38': 'MG',
+        '41': 'PR', '42': 'PR', '43': 'PR', '44': 'PR', '45': 'PR', '46': 'PR',
+        '47': 'SC', '48': 'SC', '49': 'SC',
+        '51': 'RS', '53': 'RS', '54': 'RS', '55': 'RS',
+        '61': 'DF',
+        '62': 'GO', '64': 'GO',
+        '63': 'TO',
+        '65': 'MT', '66': 'MT',
+        '67': 'MS',
+        '68': 'AC',
+        '69': 'RO',
+        '71': 'BA', '73': 'BA', '74': 'BA', '75': 'BA', '77': 'BA',
+        '79': 'SE',
+        '81': 'PE', '82': 'AL', '83': 'PB', '84': 'RN', '85': 'CE', '86': 'PI', '87': 'PE', '88': 'CE', '89': 'PI',
+        '91': 'PA', '92': 'AM', '93': 'PA', '94': 'PA', '95': 'RR', '96': 'AP', '97': 'AM', '98': 'MA', '99': 'MA'
+    }
+    return DDD_TO_STATE.get(ddd, "Não Informado")
+
 def _resolver_origem(df_in: pd.DataFrame) -> pd.Series:
     source = df_in["UtmSource"].astype(str).str.strip().copy()
     nulo   = source.isin(["", "None", "nan", "NaN"])
@@ -402,6 +437,40 @@ with aba1:
             
         st.plotly_chart(fig_ev, use_container_width=True)
 
+    # Motivos de Perda de Vendas (Lost Lead Analysis)
+    if "Etapa_NF" in df_filtrado.columns and "Status" in df_filtrado.columns:
+        df_perdidos = df_filtrado[df_filtrado["Etapa_NF"] == "Venda Perdida"]
+        if not df_perdidos.empty:
+            st.write("")
+            st.subheader("Justificativas de Perda de Vendas")
+            
+            resumo_perda = df_perdidos["Status"].fillna("Não Informado").astype(str).str.strip()
+            resumo_perda = resumo_perda.loc[resumo_perda != ""].value_counts().reset_index()
+            resumo_perda.columns = ["Motivo", "Leads"]
+            resumo_perda = resumo_perda.head(10)
+            
+            if not resumo_perda.empty:
+                fig_perda = px.bar(
+                    resumo_perda,
+                    x="Leads", y="Motivo",
+                    orientation="h",
+                    color_discrete_sequence=["#e74c3c"],
+                    template=_tema(),
+                )
+                fig_perda.update_layout(**{**_LAYOUT_BASE, **dict(
+                    height=360,
+                    xaxis=dict(title=None, gridcolor="#2a2a2a"),
+                    yaxis=dict(title=None, categoryorder="total ascending"),
+                    title=_titulo_layout("Principais Motivos de Perda (Top 10)"),
+                )})
+                fig_perda.update_traces(
+                    textposition="outside",
+                    texttemplate="%{value:,.0f}",
+                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                    cliponaxis=False,
+                )
+                st.plotly_chart(fig_perda, use_container_width=True)
+
 # ── Aba 2: Origem e Campanhas ─────────────────────────────────────────────────
 with aba2:
     col_orig, col_camp = st.columns(2)
@@ -448,6 +517,25 @@ with aba3:
         resumo_cad = _agrupar(df_filtrado, "FormaCadastro")
         _barras_card(resumo_cad, "Leads", "FormaCadastro", "Leads por forma de cadastro", "bar_forma")
 
+    st.write("")
+    col_est, col_orig_cont = st.columns(2)
+    
+    with col_est:
+        if "Telefone" in df_filtrado.columns:
+            df_est = df_filtrado.copy()
+            df_est["Estado_Origem"] = df_est["Telefone"].apply(_obter_estado_ddd)
+            resumo_est = _agrupar(df_est, "Estado_Origem")
+            _barras_card(resumo_est, "Leads", "Estado_Origem", "Estado de Origem (via DDD do Lead)", "bar_estados")
+            
+    with col_orig_cont:
+        if "OrigemContato" in df_filtrado.columns:
+            df_origcont = df_filtrado.copy()
+            df_origcont["OrigemContato"] = df_origcont["OrigemContato"].fillna("Não Informado").astype(str).str.strip()
+            df_origcont = df_origcont[df_origcont["OrigemContato"] != ""]
+            resumo_origcont = _agrupar(df_origcont, "OrigemContato")
+            _barras_card(resumo_origcont, "Leads", "OrigemContato", "Meio de Contato (Origem Contato)", "bar_origem_contato")
+
+    st.write("")
     col_mat1, col_mat2 = st.columns(2)
     
     with col_mat1:
