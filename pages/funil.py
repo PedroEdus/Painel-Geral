@@ -281,7 +281,30 @@ with aba1:
             st.info("Sem dados de funil para o período selecionado.")
 
     with col_b:
-        # Distribuição On/Off Donut Plotly
+        # Won vs Lost Cards & Remarketing Cards (moved to top)
+        if "Etapa_NF" in df_filtrado.columns:
+            tot = len(df_filtrado)
+            ganhas   = int(df_filtrado["Etapa_NF"].eq("Venda Ganha").sum())
+            perdidas = int(df_filtrado["Etapa_NF"].eq("Venda Perdida").sum())
+            p_ganhas  = f"{ganhas / tot:.1%}" if tot else "0%"
+            p_perdidas= f"{perdidas / tot:.1%}" if tot else "0%"
+
+            c_w1, c_w2 = st.columns(2)
+            c_w1.metric("Venda Ganha", _br(ganhas), f"{p_ganhas} do total", delta_color="normal")
+            c_w2.metric("Venda Perdida", _br(perdidas), f"{p_perdidas} do total", delta_color="inverse")
+
+            qtd   = int(df_filtrado["Etapa_NF"].eq("Acompanhamento").sum())
+            perc  = f"{qtd / tot:.1%}" if tot else "0%"
+            st.metric(
+                label="Acompanhamento (remarketing)",
+                value=_br(qtd),
+                delta=f"{perc} do total",
+                delta_color="off",
+            )
+            st.caption("Leads identificados como oportunidades futuras — fora do funil ativo.")
+            st.divider()
+
+        # Distribuição On/Off Donut Plotly (rosca)
         if "On_Off" in df_filtrado.columns:
             resumo_onoff = _agrupar(df_filtrado, "On_Off")
             if not resumo_onoff.empty:
@@ -319,7 +342,7 @@ with aba1:
                     align="center",
                 )
                 fig_oo.update_layout(
-                    template=_tema(), height=320,
+                    template=_tema(), height=440,
                     margin=dict(l=10, r=10, t=50, b=10),
                     legend=dict(
                         orientation="v", x=0.65, y=0.5,
@@ -329,33 +352,6 @@ with aba1:
                     title=_titulo_layout("Distribuição On / Off"),
                 )
                 st.plotly_chart(fig_oo, use_container_width=True)
-
-        st.divider()
-        # Won vs Lost Cards
-        if "Etapa_NF" in df_filtrado.columns:
-            tot = len(df_filtrado)
-            ganhas   = int(df_filtrado["Etapa_NF"].eq("Venda Ganha").sum())
-            perdidas = int(df_filtrado["Etapa_NF"].eq("Venda Perdida").sum())
-            p_ganhas  = f"{ganhas / tot:.1%}" if tot else "0%"
-            p_perdidas= f"{perdidas / tot:.1%}" if tot else "0%"
-
-            c_w1, c_w2 = st.columns(2)
-            c_w1.metric("Venda Ganha", _br(ganhas), f"{p_ganhas} do total", delta_color="normal")
-            c_w2.metric("Venda Perdida", _br(perdidas), f"{p_perdidas} do total", delta_color="inverse")
-
-        st.divider()
-        # Remarketing metric
-        if "Etapa_NF" in df_filtrado.columns:
-            tot = len(df_filtrado)
-            qtd   = int(df_filtrado["Etapa_NF"].eq("Acompanhamento").sum())
-            perc  = f"{qtd / tot:.1%}" if tot else "0%"
-            st.metric(
-                label="Acompanhamento (remarketing)",
-                value=_br(qtd),
-                delta=f"{perc} do total",
-                delta_color="off",
-            )
-            st.caption("Leads identificados como oportunidades futuras — fora do funil ativo.")
 
     # Evolução temporal de leads (Diário e Mensal)
     if "DataCadastro" in df_filtrado.columns:
