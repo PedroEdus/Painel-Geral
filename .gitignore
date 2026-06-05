@@ -1,0 +1,28 @@
+# Streamlit secrets and logs
+.streamlit/secrets.toml
+*.log
+
+# Python cache & virtualenv
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+
+# GCP Keys / Credentials
+keys/
+*.json
+*credential*.json
+*sa*.json
+
+# Data files
+*.csv
+*.xlsx
+*.xls
+
+# IDEs
+.idea/
+.vscode/
+.claude/
