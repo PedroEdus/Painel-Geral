@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from datetime import date
 
 from core.theme import aplicar_tema
 from core.ui import exibir_logo, kpis, botao_download_csv
@@ -49,8 +50,9 @@ if "date_start" in df.columns:
     datas = sorted(df["date_start"].dropna().unique())
     if len(datas) >= 2:
         data_min, data_max = min(datas), max(datas)
+        default_start = max(date(2026, 1, 1), data_min)
         data_sel = st.sidebar.date_input(
-            "Período", [data_min, data_max], min_value=data_min, max_value=data_max
+            "Período", [default_start, data_max], min_value=data_min, max_value=data_max
         )
         if isinstance(data_sel, list) or isinstance(data_sel, tuple):
             if len(data_sel) == 2:

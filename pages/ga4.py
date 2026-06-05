@@ -1,5 +1,6 @@
 import pandas as pd
 import streamlit as st
+from datetime import date
 
 from core.theme import aplicar_tema
 from core.ui import exibir_logo, kpis, botao_download_csv
@@ -67,16 +68,17 @@ nomes_curtos = {n: _nome_curto(n) for n in nomes}
 opcoes_emp = [nomes_curtos[n] for n in nomes]
 sel_nomes = st.sidebar.multiselect("Empreendimento", opcoes_emp, placeholder="Todos")
 
-min_date = df_ov_emp["date"].min()
-max_date = df_ov_emp["date"].max()
+min_date = df_ov_emp["date"].min().date()
+max_date = df_ov_emp["date"].max().date()
+default_start = max(date(2026, 1, 1), min_date)
 date_range = st.sidebar.date_input(
     "Período",
-    value=(max_date - pd.Timedelta(days=90), max_date),
+    value=(default_start, max_date),
     min_value=min_date,
     max_value=max_date,
 )
 
-dt_ini, dt_fim = min_date, max_date
+dt_ini, dt_fim = pd.Timestamp(min_date), pd.Timestamp(max_date)
 if isinstance(date_range, list) or isinstance(date_range, tuple):
     if len(date_range) == 2:
         dt_ini, dt_fim = pd.Timestamp(date_range[0]), pd.Timestamp(date_range[1])

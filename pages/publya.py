@@ -56,7 +56,7 @@ else:
 
 data_inicio_sel = st.sidebar.date_input(
     "Data início (a partir de)",
-    value=data_min_global,
+    value=max(date(2026, 1, 1), data_min_global),
     min_value=data_min_global,
     max_value=data_max_global,
 )

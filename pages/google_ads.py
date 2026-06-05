@@ -1,6 +1,7 @@
 import pandas as pd
 import streamlit as st
 import plotly.express as px
+from datetime import date
 
 from core.theme import aplicar_tema
 from core.ui import exibir_logo, kpis, botao_download_csv
@@ -48,7 +49,8 @@ df_orig = df.copy()
 
 # 1. Período
 dmin, dmax = df["date"].min().date(), df["date"].max().date()
-periodo = st.sidebar.date_input("Período", value=(dmin, dmax), min_value=dmin, max_value=dmax)
+default_start = max(date(2026, 1, 1), dmin)
+periodo = st.sidebar.date_input("Período", value=(default_start, dmax), min_value=dmin, max_value=dmax)
 if isinstance(periodo, tuple) and len(periodo) == 2:
     df = df[(df["date"].dt.date >= periodo[0]) & (df["date"].dt.date <= periodo[1])]
 
