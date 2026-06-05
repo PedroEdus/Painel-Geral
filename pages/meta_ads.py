@@ -190,7 +190,7 @@ aba_imp, aba_clk, aba_inv, aba_leads, aba_tab = st.tabs([
 ])
 
 with aba_imp:
-    grafico_evolucao(df, "date_start", "impressions", "Impressões", cor="#1877F2", fmt=lambda v: _br(v), key="meta_imp")
+    grafico_evolucao(df, "date_start", "impressions", "Impressões", cor=VERDE, fmt=lambda v: _br(v), key="meta_imp")
     col1, col2 = st.columns(2)
     with col1:
         grafico_donut(df, "objective", "impressions", "Impressões por objetivo", color_map=obj_color_label, label_func=label_obj)
@@ -198,7 +198,7 @@ with aba_imp:
         grafico_donut(df, "Tipo_Lancamento", "impressions", "Impressões por tipo", color_map=LANCAMENTO_COLOR_MAP)
 
 with aba_clk:
-    grafico_evolucao(df, "date_start", "clicks", "Cliques", cor="#3b5998", fmt=lambda v: _br(v), key="meta_clicks")
+    grafico_evolucao(df, "date_start", "clicks", "Cliques", cor="#00b359", fmt=lambda v: _br(v), key="meta_clicks")
     col1, col2 = st.columns(2)
     with col1:
         grafico_donut(df, "objective", "clicks", "Cliques por objetivo", color_map=obj_color_label, label_func=label_obj)
@@ -206,7 +206,7 @@ with aba_clk:
         grafico_donut(df, "Tipo_Lancamento", "clicks", "Cliques por tipo", color_map=LANCAMENTO_COLOR_MAP)
 
 with aba_inv:
-    grafico_evolucao(df, "date_start", "spend", "Investimento", cor="#1877F2", fmt=lambda v: _br(v, 2, "R$ "), key="meta_spend")
+    grafico_evolucao(df, "date_start", "spend", "Investimento", cor=VERDE, fmt=lambda v: _br(v, 2, "R$ "), key="meta_spend")
     col1, col2 = st.columns(2)
     with col1:
         grafico_donut(df, "objective", "spend", "Investimento por objetivo", color_map=obj_color_label, total_centro=True, fmt=lambda v: _br(v, 2, "R$ "), label_func=label_obj)
@@ -214,7 +214,7 @@ with aba_inv:
         grafico_donut(df, "Tipo_Lancamento", "spend", "Investimento por tipo", color_map=LANCAMENTO_COLOR_MAP)
 
 with aba_leads:
-    grafico_evolucao(df, "date_start", "action__lead", "Leads", cor="#00c6ff", fmt=lambda v: _br(v), key="meta_leads")
+    grafico_evolucao(df, "date_start", "action__lead", "Leads", cor="#008274", fmt=lambda v: _br(v), key="meta_leads")
     col1, col2 = st.columns(2)
     with col1:
         grafico_donut(df, "objective", "action__lead", "Leads por objetivo", color_map=obj_color_label, label_func=label_obj)
