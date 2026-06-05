@@ -357,39 +357,66 @@ with aba1:
             )
             st.caption("Leads identificados como oportunidades futuras — fora do funil ativo.")
 
-    # Monthly evolution of leads
+    # Evolução temporal de leads (Diário e Mensal)
     if "DataCadastro" in df_filtrado.columns:
-        serie = (
-            df_filtrado.dropna(subset=["DataCadastro"])
-            .assign(Mes=lambda d: d["DataCadastro"].dt.to_period("M").dt.to_timestamp())
-            .groupby("Mes")
-            .size()
-            .reset_index(name="Leads")
+        st.subheader("Evolução Temporal de Leads")
+        gran = st.radio(
+            "Visualização Série Temporal", 
+            ["Diário", "Mensal"], 
+            horizontal=True, 
+            key="funil_temporal_gran", 
+            label_visibility="collapsed"
         )
-        if not serie.empty:
-            serie["_label"] = serie["Leads"].apply(lambda v: _br(v))
+        
+        d = df_filtrado.copy()
+        d["DataCadastro"] = pd.to_datetime(d["DataCadastro"])
+        
+        if gran == "Mensal":
+            d["periodo"] = d["DataCadastro"].dt.to_period("M").dt.to_timestamp()
+            agg = d.groupby("periodo").size().reset_index(name="Leads")
+            agg = agg.sort_values("periodo")
+            agg["periodo_str"] = agg["periodo"].dt.strftime("%b/%Y")
+            
+            y_max = float(agg["Leads"].max()) if not agg.empty else 1
             fig_ev = px.bar(
-                serie, x="Mes", y="Leads",
-                text="_label",
-                title="Evolução mensal de leads",
+                agg, x="periodo_str", y="Leads",
                 color_discrete_sequence=[_VERDE_BASE],
             )
             fig_ev.update_traces(
+                text=[_br(v) for v in agg["Leads"]],
                 textposition="outside",
-                textfont=dict(color="#ffffff", size=12, family="JetBrains Mono, monospace"),
+                textfont=dict(color="#ffffff", size=12, family="Manrope, sans-serif"),
                 marker_line_width=0,
-            )
-            fig_ev.update_xaxes(
-                tickformat="%b %Y",
-                dtick="M1",
-                ticklabelmode="period",
+                cliponaxis=False,
             )
             fig_ev.update_layout(
                 **_LAYOUT_BASE,
-                height=360,
-                title=_titulo_layout("Evolução mensal de leads"),
+                height=380,
+                xaxis=dict(title=None, type="category"),
+                yaxis=dict(title=None, gridcolor="#2a2a2a", range=[0, y_max * 1.22]),
+                title=_titulo_layout("Evolução Mensal de Leads CRM"),
             )
-            st.plotly_chart(fig_ev, use_container_width=True)
+        else:
+            d["periodo"] = d["DataCadastro"].dt.normalize()
+            agg = d.groupby("periodo").size().reset_index(name="Leads")
+            agg = agg.sort_values("periodo")
+            
+            fig_ev = px.area(
+                agg, x="periodo", y="Leads",
+                color_discrete_sequence=[_VERDE_BASE],
+            )
+            fig_ev.update_traces(
+                line=dict(width=2, color=_VERDE_BASE),
+                fillcolor=_rgba(_VERDE_BASE, 0.13)
+            )
+            fig_ev.update_layout(
+                **_LAYOUT_BASE,
+                height=380,
+                yaxis=dict(gridcolor="#2a2a2a"),
+                title=_titulo_layout("Evolução Diária de Leads CRM"),
+            )
+            
+        st.plotly_chart(fig_ev, use_container_width=True)
 
 # ── Aba 2: Origem e Campanhas ─────────────────────────────────────────────────
 with aba2:
