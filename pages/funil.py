@@ -221,15 +221,28 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     visita      = _conta("Visita Agendada")
     negociacao  = _conta("Negociação")
     ganhas      = _conta("Venda Ganha")
+    perdidas    = _conta("Venda Perdida")
+    acompanhamento = _conta("Acompanhamento")
+    
+    p_ganhas = f"{ganhas / total:.1%} do total" if total else "0% do total"
+    p_perdidas = f"{perdidas / total:.1%} do total" if total else "0% do total"
+    p_acomp = f"{acompanhamento / total:.1%} do total" if total else "0% do total"
 
-    render_kpis({
-        "Total de Leads":  _br(total),
-        "Aguardando":      _br(aguardando),
-        "Em Atendimento":  _br(atendimento),
-        "Visita Agendada": _br(visita),
-        "Negociação":      _br(negociacao),
-        "Venda Ganha":     _br(ganhas),
-    })
+    cols = st.columns(8)
+    cols[0].metric("Total de Leads", _br(total))
+    cols[1].metric("Aguardando", _br(aguardando))
+    cols[2].metric("Em Atendimento", _br(atendimento))
+    cols[3].metric("Visita Agendada", _br(visita))
+    cols[4].metric("Negociação", _br(negociacao))
+    cols[5].metric("Venda Ganha", _br(ganhas), delta=p_ganhas, delta_color="normal")
+    cols[6].metric("Venda Perdida", _br(perdidas), delta=p_perdidas, delta_color="inverse")
+    cols[7].metric(
+        "Acompanhamento (remarketing)",
+        _br(acompanhamento),
+        delta=p_acomp,
+        delta_color="off",
+        help="Leads identificados como oportunidades futuras — fora do funil ativo."
+    )
 
 exibir_kpis(df_filtrado)
 st.divider()
@@ -281,29 +294,6 @@ with aba1:
             st.info("Sem dados de funil para o período selecionado.")
 
     with col_b:
-        # Won vs Lost Cards & Remarketing Cards (moved to top)
-        if "Etapa_NF" in df_filtrado.columns:
-            tot = len(df_filtrado)
-            ganhas   = int(df_filtrado["Etapa_NF"].eq("Venda Ganha").sum())
-            perdidas = int(df_filtrado["Etapa_NF"].eq("Venda Perdida").sum())
-            p_ganhas  = f"{ganhas / tot:.1%}" if tot else "0%"
-            p_perdidas= f"{perdidas / tot:.1%}" if tot else "0%"
-
-            c_w1, c_w2 = st.columns(2)
-            c_w1.metric("Venda Ganha", _br(ganhas), f"{p_ganhas} do total", delta_color="normal")
-            c_w2.metric("Venda Perdida", _br(perdidas), f"{p_perdidas} do total", delta_color="inverse")
-
-            qtd   = int(df_filtrado["Etapa_NF"].eq("Acompanhamento").sum())
-            perc  = f"{qtd / tot:.1%}" if tot else "0%"
-            st.metric(
-                label="Acompanhamento (remarketing)",
-                value=_br(qtd),
-                delta=f"{perc} do total",
-                delta_color="off",
-            )
-            st.caption("Leads identificados como oportunidades futuras — fora do funil ativo.")
-            st.divider()
-
         # Distribuição On/Off Donut Plotly (rosca)
         if "On_Off" in df_filtrado.columns:
             resumo_onoff = _agrupar(df_filtrado, "On_Off")
