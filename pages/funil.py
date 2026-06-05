@@ -518,79 +518,61 @@ with aba4:
 
 # ── Aba 5: Base Analítica ─────────────────────────────────────────────────────
 with aba5:
-    st.subheader("Matriz de Leads (Cidade ➔ Produto ➔ Responsável ➔ Lead)")
+    st.subheader("Matriz de Leads (Cidade ➔ Produto ➔ Responsável)")
     
-    # Prepara dados para a matriz com 4 níveis na hierarquia
+    # Prepara dados para a matriz com 3 níveis na hierarquia
     df_mat = df_filtrado.copy()
     df_mat["Cidade"] = df_mat["Cidade"].fillna("Não Informado").astype(str).str.strip().replace({"": "Não Informado"})
-    df_mat["Etapa_NF"] = df_mat["Etapa_NF"].fillna("Outros").astype(str).str.strip().replace({"": "Outros"})
     df_mat["Produto"] = df_mat["Produto"].fillna("Não Informado").astype(str).str.strip().replace({"": "Não Informado"})
     df_mat["Responsavel"] = df_mat["Responsavel"].fillna("Sem Responsável").astype(str).str.strip().replace({"": "Sem Responsável"})
-    df_mat["Nome"] = df_mat["Nome"].fillna("Sem Nome").astype(str).str.strip().replace({"": "Sem Nome"})
-    df_mat["UtmSource"] = _resolver_origem(df_mat)
+    
+    # Colunas com a contagem de leads por etapa do funil
+    df_mat["Aguardando"] = df_mat["Etapa_NF"].eq("Aguardando Atendimento").astype(int)
+    df_mat["Em_Atendimento"] = df_mat["Etapa_NF"].eq("Em Atendimento").astype(int)
+    df_mat["Visita_Agendada"] = df_mat["Etapa_NF"].eq("Visita Agendada").astype(int)
+    df_mat["Negociacao"] = df_mat["Etapa_NF"].eq("Negociação").astype(int)
+    df_mat["Venda_Ganha"] = df_mat["Etapa_NF"].eq("Venda Ganha").astype(int)
+    df_mat["Venda_Perdida"] = df_mat["Etapa_NF"].eq("Venda Perdida").astype(int)
+    df_mat["Acompanhamento"] = df_mat["Etapa_NF"].eq("Acompanhamento").astype(int)
     
     df_mat["Leads"] = 1
     df_mat["TempoTotal"] = pd.to_numeric(df_mat["TempoTotal"], errors="coerce").fillna(0.0)
     df_mat["Leads_Com_Tempo"] = (df_filtrado["TempoTotal"].notna() & (df_filtrado["TempoTotal"] > 0)).astype(int)
     
     col_specs_funil = [
-        {"header": "Hierarquia (Cidade ➔ Produto ➔ Responsável ➔ Lead)", "key": "name"},
+        {"header": "Hierarquia (Cidade ➔ Produto ➔ Responsável)", "key": "name"},
         {"header": "Leads", "key": "Leads", "dec": 0},
-        {"header": "Etapa", "key": "Etapa_NF", "is_text": True},
-        {"header": "Tempo (dias)", "key": "TempoTotal", "is_text": True},
-        {"header": "Responsável", "key": "Responsavel", "is_text": True},
-        {"header": "Origem (Canais)", "key": "UtmSource", "is_text": True},
-        {"header": "Forma de Cadastro", "key": "FormaCadastro", "is_text": True},
+        {"header": "Aguardando", "key": "Aguardando", "dec": 0},
+        {"header": "Em Atendimento", "key": "Em_Atendimento", "dec": 0},
+        {"header": "Visita Agendada", "key": "Visita_Agendada", "dec": 0},
+        {"header": "Negociação", "key": "Negociacao", "dec": 0},
+        {"header": "Venda Ganha", "key": "Venda_Ganha", "dec": 0},
+        {"header": "Venda Perdida", "key": "Venda_Perdida", "dec": 0},
+        {"header": "Acompanhamento", "key": "Acompanhamento", "dec": 0},
+        {"header": "Tempo Médio (dias)", "key": "TempoTotal", "is_text": True},
     ]
     
     agg_rules_funil = {
         "Leads": "sum",
+        "Aguardando": "sum",
+        "Em_Atendimento": "sum",
+        "Visita_Agendada": "sum",
+        "Negociacao": "sum",
+        "Venda_Ganha": "sum",
+        "Venda_Perdida": "sum",
+        "Acompanhamento": "sum",
         "TempoTotal": "sum",
         "Leads_Com_Tempo": "sum",
     }
     
     def derived_funil(agg, subset_df):
-        # Quantidade de leads únicos no subset
-        unique_leads = subset_df["Codigo"].dropna().unique()
-        
-        if len(unique_leads) == 1:
-            # Nível de folha (Lead individual)
-            row = subset_df.iloc[0]
-            resp = row.get("Responsavel", "—")
-            origem = row.get("UtmSource", "—")
-            tempo = row.get("TempoTotal", "—")
-            forma = row.get("FormaCadastro", "—")
-            etapa = row.get("Etapa_NF", "—")
-            
-            resp = resp if pd.notna(resp) and str(resp).strip() != "" else "—"
-            origem = origem if pd.notna(origem) and str(origem).strip() != "" else "—"
-            tempo = f"{int(tempo)} dias" if pd.notna(tempo) and float(tempo) > 0 else "—"
-            forma = forma if pd.notna(forma) and str(forma).strip() != "" else "—"
-            etapa_badge = _badge_html(etapa) if etapa != "—" else "—"
-            
-            return {
-                "Responsavel": resp,
-                "UtmSource": origem,
-                "TempoTotal": tempo,
-                "FormaCadastro": forma,
-                "Etapa_NF": etapa_badge,
-                "Leads": 1
-            }
-        else:
-            # Nível de agrupamento (pai)
-            tempo_sum = agg.get("TempoTotal", 0)
-            leads_com_tempo = agg.get("Leads_Com_Tempo", 0)
-            avg = tempo_sum / leads_com_tempo if leads_com_tempo > 0 else 0
-            tempo_str = f"{avg:.1f} dias (média)" if avg > 0 else "—"
-            
-            return {
-                "Responsavel": "—",
-                "UtmSource": "—",
-                "TempoTotal": tempo_str,
-                "FormaCadastro": "—",
-                "Etapa_NF": "—",
-                "Leads": agg.get("Leads", 0)
-            }
+        tempo_sum = agg.get("TempoTotal", 0)
+        leads_com_tempo = agg.get("Leads_Com_Tempo", 0)
+        avg = tempo_sum / leads_com_tempo if leads_com_tempo > 0 else 0
+        tempo_str = f"{avg:.1f} dias" if avg > 0 else "—"
+        return {
+            "TempoTotal": tempo_str,
+        }
             
     # Cria o dataframe de download contendo todas as colunas
     colunas_dl = [
@@ -602,11 +584,11 @@ with aba5:
         
     tabela_matriz_html(
         df=df_mat,
-        group_cols=["Cidade", "Produto", "Responsavel", "Nome"],
+        group_cols=["Cidade", "Produto", "Responsavel"],
         col_specs=col_specs_funil,
         agg_rules=agg_rules_funil,
         derived_func=derived_funil,
-        grid_template="minmax(380px, 3.5fr) 0.8fr 1.3fr 1.2fr 1.5fr 1fr 1.3fr",
+        grid_template="minmax(320px, 3fr) 0.7fr 0.9fr 1.1fr 1.1fr 0.9fr 0.9fr 0.9fr 1.1fr 1.1fr",
         active_campaigns=None,
         key="funil_matrix_hierarquia",
         df_download=df_download,
