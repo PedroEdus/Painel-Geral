@@ -138,7 +138,7 @@ body, p, label, input, select, textarea, h1, h2, h3, h4, h5, h6,
     font-family: 'Manrope', -apple-system, sans-serif !important;
 }
 div[data-testid="stMetric"], div[data-testid="metric-container"] {
-    background:#1c1c1c !important; border-radius:8px !important; padding:16px 18px !important; border:none !important;
+    background:#1c1c1c !important; border-radius:8px !important; padding:16px 18px !important; border:none !important; min-height:115px !important;
 }
 div[data-testid="stMetricLabel"] > div, div[data-testid="stMetricLabel"] label, div[data-testid="stMetricLabel"] p {
     font-size:13px !important; font-weight:400 !important; color:rgba(255,255,255,0.72) !important;

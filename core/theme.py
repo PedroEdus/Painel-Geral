@@ -18,6 +18,7 @@ div[data-testid="stMetric"], div[data-testid="metric-container"] {
     border-radius: 8px !important; 
     padding: 16px 18px !important; 
     border: none !important;
+    min-height: 115px !important;
     animation: fadeIn 0.45s ease-out;
 }
 div[data-testid="stMetricLabel"] > div, div[data-testid="stMetricLabel"] label, div[data-testid="stMetricLabel"] p {
