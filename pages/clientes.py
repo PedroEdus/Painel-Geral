@@ -26,25 +26,25 @@ df_orig = df.copy()
 
 # 1. Ano da venda
 years_list = sorted(list(df_orig['ano_venda'].dropna().unique()), reverse=True)
-selected_years = st.sidebar.multiselect("Anos de Venda", options=years_list, default=years_list[:5])
+selected_years = st.sidebar.multiselect("Anos de Venda", options=years_list, placeholder="Todos")
 if selected_years:
     df = df[df['ano_venda'].isin(selected_years)]
 
 # 2. Gênero (Sexo)
 genders_list = sorted(list(df_orig['sexo'].dropna().unique()))
-selected_genders = st.sidebar.multiselect("Gênero", options=genders_list, default=genders_list)
+selected_genders = st.sidebar.multiselect("Gênero", options=genders_list, placeholder="Todos")
 if selected_genders:
     df = df[df['sexo'].isin(selected_genders)]
 
 # 3. Finalidade da compra
 purposes_list = sorted(list(df_orig['finalidade'].dropna().unique()))
-selected_purposes = st.sidebar.multiselect("Finalidade da Compra", options=purposes_list, default=purposes_list)
+selected_purposes = st.sidebar.multiselect("Finalidade da Compra", options=purposes_list, placeholder="Todas")
 if selected_purposes:
     df = df[df['finalidade'].isin(selected_purposes)]
 
 # 4. Cidade do empreendimento (Obra)
 cities_list = sorted(list(df_orig['cidade_obra'].dropna().unique()))
-selected_cities = st.sidebar.multiselect("Cidade do Empreendimento (Obra)", options=cities_list)
+selected_cities = st.sidebar.multiselect("Cidade do Empreendimento (Obra)", options=cities_list, placeholder="Todas")
 if selected_cities:
     df = df[df['cidade_obra'].isin(selected_cities)]
 
