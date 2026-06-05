@@ -478,6 +478,75 @@ else:
 
 st.divider()
 
+# ── Série Temporal de Leads (CRM) ─────────────────────────────────────────────
+st.subheader("Evolução dos Leads (CRM)")
+
+if not funil.empty:
+    gran_leads = st.radio("Visualização Leads", ["Diário", "Mensal"], horizontal=True, key="leads_gran", label_visibility="collapsed")
+    
+    # Preparar dados do CRM
+    funil_temporal = funil.copy()
+    funil_temporal["DataCadastro"] = pd.to_datetime(funil_temporal["DataCadastro"])
+    
+    if gran_leads == "Mensal":
+        funil_temporal["month"] = funil_temporal["DataCadastro"].dt.to_period("M").dt.to_timestamp()
+        agg_leads = funil_temporal.groupby("month").size().reset_index(name="Leads")
+        agg_leads = agg_leads.sort_values("month")
+        agg_leads["month_str"] = agg_leads["month"].dt.strftime("%b/%Y")
+        
+        y_max = float(agg_leads["Leads"].max()) if not agg_leads.empty else 1
+        fig_leads = px.bar(
+            agg_leads, x="month_str", y="Leads",
+            color_discrete_sequence=[VERDE]
+        )
+        fig_leads.update_traces(
+            text=[_br(v) for v in agg_leads["Leads"]],
+            textposition="outside",
+            textfont=dict(color="#ffffff", size=12, family="Manrope, sans-serif"),
+            marker_line_width=0,
+            cliponaxis=False,
+        )
+        fig_leads.update_layout(
+            **{
+                **_LAYOUT_BASE,
+                **dict(
+                    height=380,
+                    xaxis=dict(title=None, type="category"),
+                    yaxis=dict(title=None, gridcolor="#2a2a2a", range=[0, y_max * 1.22]),
+                    title=_titulo_layout("Leads CRM por Mês"),
+                )
+            }
+        )
+    else:
+        funil_temporal["day"] = funil_temporal["DataCadastro"].dt.normalize()
+        agg_leads = funil_temporal.groupby("day").size().reset_index(name="Leads")
+        agg_leads = agg_leads.sort_values("day")
+        
+        fig_leads = px.area(
+            agg_leads, x="day", y="Leads",
+            color_discrete_sequence=[VERDE]
+        )
+        fig_leads.update_traces(
+            line=dict(width=2, color=VERDE),
+            fillcolor=_rgba(VERDE, 0.13)
+        )
+        fig_leads.update_layout(
+            **{
+                **_LAYOUT_BASE,
+                **dict(
+                    height=380,
+                    yaxis=dict(gridcolor="#2a2a2a"),
+                    title=_titulo_layout("Leads CRM Diários"),
+                )
+            }
+        )
+        
+    st.plotly_chart(fig_leads, use_container_width=True)
+else:
+    st.info("Sem dados de leads CRM para o período selecionado.")
+
+st.divider()
+
 # ── Drill-through (Navegação para Páginas Detalhadas) ──────────────────────────
 st.subheader("Explorar Detalhes por Canal")
 
