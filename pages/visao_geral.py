@@ -32,7 +32,7 @@ from sources.funil import carregar_leads as carregar_crm
 # Apply visual theme
 aplicar_tema()
 
-st.title("Visão Geral do Marketing")
+st.title("Marketing Analytics")
 
 # ── Carregar Todas as Fontes de Dados ────────────────────────────────────────
 with st.spinner("Carregando bases de dados do BigQuery..."):
@@ -57,15 +57,19 @@ if not df_ga4.empty:
     min_dates.append(df_ga4["date"].min().date())
     max_dates.append(df_ga4["date"].max().date())
 
-global_min = min(min_dates) if min_dates else date.today() - timedelta(days=90)
-global_max = max(max_dates) if max_dates else date.today()
+global_min = min(min_dates) if min_dates else date(2026, 1, 1)
+global_max = max(max_dates) if max_dates else date(2026, 12, 31)
+
+# Ensure min/max range limits allow for full year 2026 selection
+limit_min = min(global_min, date(2026, 1, 1))
+limit_max = max(global_max, date(2026, 12, 31))
 
 # Filtro global de período no topo
 periodo_sel = st.date_input(
     "Período Global", 
-    value=(global_max - timedelta(days=90), global_max),
-    min_value=global_min,
-    max_value=global_max
+    value=(date(2026, 1, 1), date(2026, 12, 31)),
+    min_value=limit_min,
+    max_value=limit_max
 )
 
 start_date, end_date = global_min, global_max

@@ -2,7 +2,7 @@ import streamlit as st
 from core.theme import aplicar_tema
 from core.ui import exibir_logo
 
-st.set_page_config(page_title="Painel Buriti", page_icon="📊", layout="wide")
+st.set_page_config(page_title="Marketing Analytics", page_icon="📊", layout="wide")
 
 # Apply global dark theme and styling
 aplicar_tema()
