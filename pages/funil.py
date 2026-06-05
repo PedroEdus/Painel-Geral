@@ -389,13 +389,12 @@ with aba1:
                 marker_line_width=0,
                 cliponaxis=False,
             )
-            fig_ev.update_layout(
-                **_LAYOUT_BASE,
+            fig_ev.update_layout(**{**_LAYOUT_BASE, **dict(
                 height=380,
                 xaxis=dict(title=None, type="category"),
                 yaxis=dict(title=None, gridcolor="#2a2a2a", range=[0, y_max * 1.22]),
                 title=_titulo_layout("Evolução Mensal de Leads CRM"),
-            )
+            )})
         else:
             d["periodo"] = d["DataCadastro"].dt.normalize()
             agg = d.groupby("periodo").size().reset_index(name="Leads")
@@ -409,12 +408,11 @@ with aba1:
                 line=dict(width=2, color=_VERDE_BASE),
                 fillcolor=_rgba(_VERDE_BASE, 0.13)
             )
-            fig_ev.update_layout(
-                **_LAYOUT_BASE,
+            fig_ev.update_layout(**{**_LAYOUT_BASE, **dict(
                 height=380,
                 yaxis=dict(gridcolor="#2a2a2a"),
                 title=_titulo_layout("Evolução Diária de Leads CRM"),
-            )
+            )})
             
         st.plotly_chart(fig_ev, use_container_width=True)
 
