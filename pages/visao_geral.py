@@ -127,8 +127,7 @@ ga4_emp_users     = ga4_emp_df["totalUsers"].sum() if not ga4_emp_df.empty else 
 gads_cost = gads["cost"].sum() if not gads.empty else 0.0
 gads_clicks = gads["clicks"].sum() if not gads.empty else 0.0
 gads_imp = gads["impressions"].sum() if not gads.empty else 0.0
-# Google Ads conversions are forced to 0.0 (unreliable)
-gads_conv = 0.0
+gads_conv = gads["conversions"].sum() if not gads.empty else 0.0
 
 # Meta Ads
 meta_cost = meta["spend"].sum() if not meta.empty else 0.0
@@ -146,8 +145,7 @@ publya_conv = publya["conversions"].sum() if not publya.empty else 0.0
 total_spend = gads_cost + meta_cost + publya_cost
 total_clicks = gads_clicks + meta_clicks + publya_clicks
 total_imp = gads_imp + meta_imp + publya_imp
-# Leads Totais ignora Google Ads
-total_leads = meta_leads + publya_conv
+total_leads = gads_conv + meta_leads + publya_conv
 
 # KPIs Row 1 (Métricas Absolutas)
 kpis({
@@ -288,8 +286,8 @@ with col1:
             "Cliques": gads_clicks,
             "CTR": (gads_clicks / gads_imp * 100) if gads_imp else 0.0,
             "CPC": (gads_cost / gads_clicks) if gads_clicks else 0.0,
-            "Leads": None, # Removed leads
-            "CPL": None,
+            "Leads": gads_conv,
+            "CPL": (gads_cost / gads_conv) if gads_conv else 0.0,
             "Leads_CRM": crm_leads_gads,
             "CPL_CRM": (gads_cost / crm_leads_gads) if crm_leads_gads > 0 else None
         })
@@ -444,6 +442,8 @@ if not ga4.empty:
         
         if gran_ga4 == "Mensal":
             ga4_monthly = ga4_chart_df.groupby("month", as_index=False)["sessions"].sum()
+            ga4_monthly = ga4_monthly.sort_values("month")
+            ga4_monthly["month"] = ga4_monthly["month"].dt.strftime("%b/%Y")
             # Utiliza o grafico_barras_mensais central e força a cor selecionada
             fig = px.bar(ga4_monthly, x="month", y="sessions")
             y_max = float(ga4_monthly["sessions"].max()) if not ga4_monthly.empty else 1

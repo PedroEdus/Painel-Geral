@@ -38,10 +38,6 @@ def carregar_google_ads() -> pd.DataFrame:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
 
-    # Force conversions to 0 as they are not reliable
-    df["conversions"] = 0.0
-    df["conversions_value"] = 0.0
-
     # Filter out test campaigns starting with [TS]
     df = df[~df["campaign_name"].str.match(r"^\[TS\]", na=False)]
 
