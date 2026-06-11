@@ -8,6 +8,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
+import re
 import numpy as np
 import pandas as pd
 import requests
@@ -72,19 +73,42 @@ _CAMPOS_DICT_NOME = [
     "Responsavel", "OrigemContato", "FinalidadeCompra",
 ]
 
+def _safe_nome(val) -> str | None:
+    """Extrai .Nome de dict com segurança; retorna None se inválido."""
+    if isinstance(val, dict):
+        nome = val.get("Nome")
+        return str(nome).strip() if nome is not None else None
+    if isinstance(val, str):
+        v = val.strip()
+        return v if v else None
+    return None
+
+
 def _flatten_lead(lead: dict) -> dict:
-    """Extrai .Nome de campos dict; popula Cidade a partir de Produto."""
     lead = lead.copy()
 
+    # Campos simples: extrai .Nome do dict
     for campo in _CAMPOS_DICT_NOME:
-        val = lead.get(campo)
-        if isinstance(val, dict):
-            lead[campo] = val.get("Nome")
+        lead[campo] = _safe_nome(lead.get(campo))
 
+    # Produto: extrai Cidade e Nome separadamente
     produto = lead.get("Produto")
     if isinstance(produto, dict):
-        lead["Cidade"]  = produto.get("Cidade")
-        lead["Produto"] = produto.get("Nome")
+        lead["Cidade"]  = _safe_nome(produto.get("Cidade") or produto.get("cidade"))
+        if lead["Cidade"] is None:
+            # fallback: campo Cidade pode ser string direto
+            lead["Cidade"] = str(produto.get("Cidade", "")).strip() or None
+        lead["Produto"] = _safe_nome(produto.get("Nome"))
+    else:
+        lead.setdefault("Cidade", None)
+
+    # TempoTotalLead: extrai só o número via regex (ex: '1 Hora(s)' → 1)
+    tempo = lead.get("TempoTotalLead")
+    if tempo is not None:
+        m = re.search(r"\d+", str(tempo))
+        lead["TempoTotalLead"] = int(m.group()) if m else None
+    else:
+        lead["TempoTotalLead"] = None
 
     return lead
 
