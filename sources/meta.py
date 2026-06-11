@@ -41,8 +41,8 @@ def carregar_dados() -> pd.DataFrame:
     existing_actions = [c for c in _ACTION_COLS if c in df.columns]
     df["conversions"] = df[existing_actions].sum(axis=1) if existing_actions else 0.0
 
-    # Leads = outcome leads + lead generation (complete_registration)
-    lead_cols = [c for c in ["action__lead", "action__complete_registration"] if c in df.columns]
+    # Leads = outcome leads (pixel) + lead gen form (instant forms)
+    lead_cols = [c for c in ["action__lead", "action__lead_gen_form"] if c in df.columns]
     df["leads"] = df[lead_cols].sum(axis=1) if lead_cols else 0.0
 
     # Estoque vs Lançamento
