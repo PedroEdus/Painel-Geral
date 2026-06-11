@@ -67,6 +67,28 @@ def login() -> dict:
     }
 
 
+_CAMPOS_DICT_NOME = [
+    "FormaCadastro", "Funil", "Etapa", "Status",
+    "Responsavel", "OrigemContato", "FinalidadeCompra",
+]
+
+def _flatten_lead(lead: dict) -> dict:
+    """Extrai .Nome de campos dict; popula Cidade a partir de Produto."""
+    lead = lead.copy()
+
+    for campo in _CAMPOS_DICT_NOME:
+        val = lead.get(campo)
+        if isinstance(val, dict):
+            lead[campo] = val.get("Nome")
+
+    produto = lead.get("Produto")
+    if isinstance(produto, dict):
+        lead["Cidade"]  = produto.get("Cidade")
+        lead["Produto"] = produto.get("Nome")
+
+    return lead
+
+
 def _extrair_lista(data) -> list:
     if isinstance(data, list):
         return data
@@ -183,7 +205,7 @@ def _derivar_campos(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def preparar_df(leads: list) -> pd.DataFrame:
-    df = pd.DataFrame(leads)
+    df = pd.DataFrame([_flatten_lead(l) for l in leads])
 
     # Renomear colunas da API para os nomes esperados pelo Streamlit
     df = df.rename(columns={
@@ -193,8 +215,8 @@ def preparar_df(leads: list) -> pd.DataFrame:
         "FinalidadeCompra":"Finalidade",
     })
 
-    # Campos UTM e Cidade ausentes na API — criar como nulos
-    for col in ("Cidade", "UtmSource", "UtmCampaign", "UtmMedium"):
+    # Campos UTM ausentes na API — criar como nulos (Cidade vem de Produto)
+    for col in ("UtmSource", "UtmCampaign", "UtmMedium"):
         if col not in df.columns:
             df[col] = None
 
