@@ -41,6 +41,10 @@ def carregar_dados() -> pd.DataFrame:
     existing_actions = [c for c in _ACTION_COLS if c in df.columns]
     df["conversions"] = df[existing_actions].sum(axis=1) if existing_actions else 0.0
 
+    # Leads = outcome leads + lead generation (complete_registration)
+    lead_cols = [c for c in ["action__lead", "action__complete_registration"] if c in df.columns]
+    df["leads"] = df[lead_cols].sum(axis=1) if lead_cols else 0.0
+
     # Estoque vs Lançamento
     df["Tipo_Lancamento"] = df["campaign_name"].map(_tipo_lancamento)
 
@@ -58,7 +62,7 @@ def agregar_por_campanha(df: pd.DataFrame) -> pd.DataFrame:
 
     action_cols = [c for c in df.columns if c.startswith("action__")]
     cols_soma = [
-        c for c in ["spend", "impressions", "reach", "clicks", "inline_link_clicks", "conversions"]
+        c for c in ["spend", "impressions", "reach", "clicks", "inline_link_clicks", "conversions", "leads"]
         if c in df.columns
     ] + action_cols
 

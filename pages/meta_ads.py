@@ -120,7 +120,7 @@ spend_t = df["spend"].sum()
 imp_t = df["impressions"].sum()
 reach_t = df["reach"].sum()
 clk_t = df["clicks"].sum()
-leads_t = df["action__lead"].sum()
+leads_t = df["leads"].sum()
 ctr_t = (clk_t / imp_t * 100) if imp_t else 0
 cpl_t = (spend_t / leads_t) if leads_t else 0
 cpm_t = (spend_t / imp_t * 1000) if imp_t else 0
@@ -151,7 +151,7 @@ def exibir_matriz_meta(df_tabela, active_campaigns, df_download):
         {"header": "Cliques", "key": "clicks", "dec": 0},
         {"header": "CTR (%)", "key": "CTR", "dec": 2, "is_pct": True},
         {"header": "Investimento", "key": "spend", "dec": 2, "pref": "R$ "},
-        {"header": "Leads", "key": "action__lead", "dec": 0},
+        {"header": "Leads", "key": "leads", "dec": 0},
         {"header": "CPL (R$)", "key": "CPL", "dec": 2, "pref": "R$ "},
     ]
     agg_rules = {
@@ -159,13 +159,13 @@ def exibir_matriz_meta(df_tabela, active_campaigns, df_download):
         "impressions": "sum",
         "clicks": "sum",
         "spend": "sum",
-        "action__lead": "sum",
+        "leads": "sum",
     }
     def derived_meta(agg):
         imp = agg.get("impressions", 0)
         clk = agg.get("clicks", 0)
         spd = agg.get("spend", 0)
-        lds = agg.get("action__lead", 0)
+        lds = agg.get("leads", 0)
         
         ctr = (clk / imp * 100) if imp else 0
         cpl = (spd / lds) if lds else 0
@@ -216,12 +216,12 @@ with aba_inv:
         grafico_donut(df, "Tipo_Lancamento", "spend", "Investimento por tipo", color_map=LANCAMENTO_COLOR_MAP)
 
 with aba_leads:
-    grafico_evolucao(df, "date_start", "action__lead", "Leads", cor="#008274", fmt=lambda v: _br(v), key="meta_leads")
+    grafico_evolucao(df, "date_start", "leads", "Leads", cor="#008274", fmt=lambda v: _br(v), key="meta_leads")
     col1, col2 = st.columns(2)
     with col1:
-        grafico_donut(df, "objective", "action__lead", "Leads por objetivo", color_map=obj_color_label, label_func=label_obj)
+        grafico_donut(df, "objective", "leads", "Leads por objetivo", color_map=obj_color_label, label_func=label_obj)
     with col2:
-        grafico_donut(df, "Tipo_Lancamento", "action__lead", "Leads por tipo", color_map=LANCAMENTO_COLOR_MAP)
+        grafico_donut(df, "Tipo_Lancamento", "leads", "Leads por tipo", color_map=LANCAMENTO_COLOR_MAP)
 
 with aba_tab:
     st.subheader("Matriz de Desempenho (Conta ➔ UF ➔ Cidade ➔ Objetivo ➔ Campanha)")
