@@ -62,12 +62,13 @@ df_filtrado = df.copy()
 for label, coluna in FILTROS:
     if coluna not in df_filtrado.columns:
         continue
-    # Get sorted list of options
-    opcoes = sorted(df_filtrado[coluna].dropna().unique().tolist())
+    serie = df_filtrado[coluna].dropna().astype(str).str.strip()
+    serie = serie[serie != ""]
+    opcoes = sorted(serie.unique().tolist())
     if opcoes:
         sel = st.sidebar.multiselect(label, opcoes, placeholder="Todas")
         if sel:
-            df_filtrado = df_filtrado[df_filtrado[coluna].isin(sel)]
+            df_filtrado = df_filtrado[df_filtrado[coluna].astype(str).str.strip().isin(sel)]
 
 # ── Validar Estado Pós-Filtros ────────────────────────────────────────────────
 if df_filtrado.empty:
