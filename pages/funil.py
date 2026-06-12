@@ -599,26 +599,25 @@ with aba1:
                 with g_cols[_ci]:
                     _label = "SDR — Funil de Atendimento" if _grupo == "SDR" else "Outros Funis (agrupados)"
                     st.markdown(f"**{_label}**")
-                    _ka, _kb, _kc = st.columns(3)
+                    _ka, _kb, _kc, _kd = st.columns(4)
                     _ka.metric("Total Leads",  _br(_met["Total"]),
                               help="Total de leads que entraram neste funil no período selecionado.")
                     _kb.metric("Vendas Ganhas", _br(_met["Venda Ganha"]),
                               help="Leads que chegaram à etapa Venda Ganha.")
                     _kc.metric("Conv. Total",  f"{_met['Conv. Total (%)']:.1f}%",
                               help="Taxa de conversão total: Venda Ganha ÷ Total de Leads.")
-                    _kd, _ke, _kf = st.columns(3)
                     _kd.metric("Taxa Perda",   f"{_met['Taxa Perda (%)']:.1f}%",
                               help="% de leads marcados como Venda Perdida sobre o total.")
+                    _ke, _kf, _kg, _kh = st.columns(4)
                     _ke.metric("Lead→Atend",   f"{_met['Lead→Atend (%)']:.1f}%",
                               help="% de leads que avançaram para atendimento ativo (saíram de Aguardando Atendimento).")
                     _kf.metric("Negoc→Ganho",  f"{_met['Negoc→Ganho (%)']:.1f}%",
                               help="% de leads em Negociação que fecharam como Venda Ganha.")
-                    _kg, _kh, _ki = st.columns(3)
                     _kg.metric("Tempo Médio",
-                              f"{_met['Tempo Médio (dias)']:.1f} dias" if _met.get("Tempo Médio (dias)") else "—",
+                              f"{_met['Tempo Médio (dias)']:.1f} d" if _met.get("Tempo Médio (dias)") else "—",
                               help="Tempo médio (dias) de todos os leads com tempo registrado.")
                     _kh.metric("Ciclo Fecham.",
-                              f"{_met['Ciclo Fecham. (dias)']:.1f} dias" if _met.get("Ciclo Fecham. (dias)") else "—",
+                              f"{_met['Ciclo Fecham. (dias)']:.1f} d" if _met.get("Ciclo Fecham. (dias)") else "—",
                               help="Tempo médio (dias) dos leads que chegaram a Venda Ganha.")
 
             st.write("")
@@ -656,32 +655,45 @@ with aba1:
                 st.plotly_chart(_fig_vol, use_container_width=True)
 
             with _col_tx:
-                _taxa_vars = ["Lead→Atend (%)", "Atend→Visita (%)", "Visita→Negoc (%)", "Negoc→Ganho (%)"]
-                _df_tx = _df_met.melt(
-                    id_vars=["Grupo"], value_vars=_taxa_vars,
-                    var_name="Etapa", value_name="Taxa (%)"
-                )
-                _fig_tx = px.bar(
-                    _df_tx, x="Etapa", y="Taxa (%)", color="Grupo",
-                    barmode="group",
-                    color_discrete_map=CORES_GRUPO,
-                    template=_tema(),
-                )
-                _fig_tx.update_traces(
-                    texttemplate="%{y:.1f}%", textposition="outside", cliponaxis=False,
-                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
-                )
-                _fig_tx.update_layout(**{**_LAYOUT_BASE, **dict(
-                    height=320,
-                    title=_titulo_layout("Taxa de Conversão por Etapa (%)"),
-                    xaxis=dict(title=None),
-                    yaxis=dict(title=None, gridcolor="#2a2a2a"),
-                    legend=dict(
-                        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                        font=dict(family="Manrope, sans-serif", size=11, color="rgba(255,255,255,0.8)"),
-                    ),
-                )})
-                st.plotly_chart(_fig_tx, use_container_width=True)
+                _etapas_dur = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação", "Venda Ganha"]
+                _dur_rows = []
+                for _gn, _dg in [(_g, df_comp[df_comp["_Grupo"] == _g]) for _g in grupos_dados]:
+                    if "TempoTotal" not in _dg.columns:
+                        continue
+                    for _et in _etapas_dur:
+                        _sub = _dg.loc[
+                            _dg["Etapa_NF"].eq(_et) & _dg["TempoTotal"].notna() & (_dg["TempoTotal"] > 0),
+                            "TempoTotal"
+                        ]
+                        if not _sub.empty:
+                            _dur_rows.append({
+                                "Grupo": _gn,
+                                "Etapa": _et,
+                                "Dias": round(float(_sub.mean()) / 24, 1),
+                            })
+                if _dur_rows:
+                    _df_dur = pd.DataFrame(_dur_rows)
+                    _fig_dur = px.bar(
+                        _df_dur, x="Etapa", y="Dias", color="Grupo",
+                        barmode="group",
+                        color_discrete_map=CORES_GRUPO,
+                        template=_tema(),
+                    )
+                    _fig_dur.update_traces(
+                        texttemplate="%{y:.1f}d", textposition="outside", cliponaxis=False,
+                        textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                    )
+                    _fig_dur.update_layout(**{**_LAYOUT_BASE, **dict(
+                        height=320,
+                        title=_titulo_layout("Duração Média por Etapa (dias)"),
+                        xaxis=dict(title=None),
+                        yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                        legend=dict(
+                            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                            font=dict(family="Manrope, sans-serif", size=11, color="rgba(255,255,255,0.8)"),
+                        ),
+                    )})
+                    st.plotly_chart(_fig_dur, use_container_width=True)
 
             # Resumo tabular
             st.write("")
