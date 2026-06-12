@@ -265,7 +265,16 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     p_perdidas = f"{perdidas / total:.1%} do total" if total else "0% do total"
     p_acomp = f"{acompanhamento / total:.1%} do total" if total else "0% do total"
 
-    cols = st.columns(8)
+    _t_all_kpi = df_in.loc[
+        df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
+    ] if "TempoTotal" in df_in.columns else pd.Series(dtype=float)
+    _t_ganhas_kpi = df_in.loc[
+        df_in["Etapa_NF"].eq("Venda Ganha") & df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
+    ] if "TempoTotal" in df_in.columns else pd.Series(dtype=float)
+    _tm_geral = round(float(_t_all_kpi.mean()) / 24, 1) if not _t_all_kpi.empty else None
+    _tm_fech  = round(float(_t_ganhas_kpi.mean()) / 24, 1) if not _t_ganhas_kpi.empty else None
+
+    cols = st.columns(10)
     cols[0].metric("Total de Leads", _br(total))
     cols[1].metric("Aguardando", _br(aguardando))
     cols[2].metric("Em Atendimento", _br(atendimento))
@@ -274,35 +283,22 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     cols[5].metric("Venda Ganha", _br(ganhas), delta=p_ganhas, delta_color="normal")
     cols[6].metric("Venda Perdida", _br(perdidas), delta=p_perdidas, delta_color="inverse")
     cols[7].metric(
-        "Acompanhamento (remarketing)",
+        "Acompanhamento",
         _br(acompanhamento),
         delta=p_acomp,
         delta_color="off",
         help="Leads identificados como oportunidades futuras — fora do funil ativo."
     )
-
-    if "TempoTotal" in df_in.columns:
-        _t_all = df_in.loc[
-            df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
-        ]
-        _t_ganhas_t = df_in.loc[
-            df_in["Etapa_NF"].eq("Venda Ganha") &
-            df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
-        ]
-        _tm_geral = round(float(_t_all.mean()) / 24, 1) if not _t_all.empty else None
-        _tm_fech  = round(float(_t_ganhas_t.mean()) / 24, 1) if not _t_ganhas_t.empty else None
-        st.write("")
-        _tc1, _tc2, _tc3 = st.columns([1, 1, 4])
-        _tc1.metric(
-            "Tempo Médio no Funil",
-            f"{_tm_geral:.1f} dias" if _tm_geral else "—",
-            help="Tempo médio (dias) de todos os leads com tempo registrado (TempoTotal em horas ÷ 24)."
-        )
-        _tc2.metric(
-            "Ciclo de Fechamento",
-            f"{_tm_fech:.1f} dias" if _tm_fech else "—",
-            help="Tempo médio (dias) dos leads que chegaram a Venda Ganha."
-        )
+    cols[8].metric(
+        "Tempo Médio",
+        f"{_tm_geral:.1f} d" if _tm_geral else "—",
+        help="Tempo médio (dias) de todos os leads com tempo registrado."
+    )
+    cols[9].metric(
+        "Ciclo Fecham.",
+        f"{_tm_fech:.1f} d" if _tm_fech else "—",
+        help="Tempo médio (dias) dos leads que chegaram a Venda Ganha."
+    )
 
 exibir_kpis(df_filtrado)
 st.divider()
