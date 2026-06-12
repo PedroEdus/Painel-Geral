@@ -281,6 +281,29 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
         help="Leads identificados como oportunidades futuras — fora do funil ativo."
     )
 
+    if "TempoTotal" in df_in.columns:
+        _t_all = df_in.loc[
+            df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
+        ]
+        _t_ganhas_t = df_in.loc[
+            df_in["Etapa_NF"].eq("Venda Ganha") &
+            df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
+        ]
+        _tm_geral = round(float(_t_all.mean()) / 24, 1) if not _t_all.empty else None
+        _tm_fech  = round(float(_t_ganhas_t.mean()) / 24, 1) if not _t_ganhas_t.empty else None
+        st.write("")
+        _tc1, _tc2, _tc3 = st.columns([1, 1, 4])
+        _tc1.metric(
+            "Tempo Médio no Funil",
+            f"{_tm_geral:.1f} dias" if _tm_geral else "—",
+            help="Tempo médio (dias) de todos os leads com tempo registrado (TempoTotal em horas ÷ 24)."
+        )
+        _tc2.metric(
+            "Ciclo de Fechamento",
+            f"{_tm_fech:.1f} dias" if _tm_fech else "—",
+            help="Tempo médio (dias) dos leads que chegaram a Venda Ganha."
+        )
+
 exibir_kpis(df_filtrado)
 st.divider()
 
@@ -557,6 +580,10 @@ with aba1:
                 "Atend→Visita (%)": round(visita_plus / pipeline  * 100, 1) if pipeline     else 0.0,
                 "Visita→Negoc (%)": round(negoc_plus / visita_plus* 100, 1) if visita_plus  else 0.0,
                 "Negoc→Ganho (%)":  round(ganhas   / negoc_plus   * 100, 1) if negoc_plus   else 0.0,
+                "Tempo Médio (dias)":   round(float(df_g.loc[df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()) / 24, 1)
+                                        if "TempoTotal" in df_g.columns and df_g["TempoTotal"].notna().any() else None,
+                "Ciclo Fecham. (dias)": round(float(df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha") & df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()) / 24, 1)
+                                        if "TempoTotal" in df_g.columns and df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha"), "TempoTotal"].notna().any() else None,
             }
 
         grupos_dados: dict = {}
@@ -586,6 +613,13 @@ with aba1:
                               help="% de leads que avançaram para atendimento ativo (saíram de Aguardando Atendimento).")
                     _kf.metric("Negoc→Ganho",  f"{_met['Negoc→Ganho (%)']:.1f}%",
                               help="% de leads em Negociação que fecharam como Venda Ganha.")
+                    _kg, _kh, _ki = st.columns(3)
+                    _kg.metric("Tempo Médio",
+                              f"{_met['Tempo Médio (dias)']:.1f} dias" if _met.get("Tempo Médio (dias)") else "—",
+                              help="Tempo médio (dias) de todos os leads com tempo registrado.")
+                    _kh.metric("Ciclo Fecham.",
+                              f"{_met['Ciclo Fecham. (dias)']:.1f} dias" if _met.get("Ciclo Fecham. (dias)") else "—",
+                              help="Tempo médio (dias) dos leads que chegaram a Venda Ganha.")
 
             st.write("")
 
@@ -655,6 +689,7 @@ with aba1:
                 "Grupo", "Total", "Venda Ganha", "Venda Perdida",
                 "Conv. Total (%)", "Taxa Perda (%)",
                 "Lead→Atend (%)", "Atend→Visita (%)", "Visita→Negoc (%)", "Negoc→Ganho (%)",
+                "Tempo Médio (dias)", "Ciclo Fecham. (dias)",
             ]
             st.dataframe(
                 _df_met[_display_cols].set_index("Grupo"),
