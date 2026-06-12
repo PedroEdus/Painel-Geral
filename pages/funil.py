@@ -819,7 +819,7 @@ with aba4:
                     .head(20)
                 )
                 if "Tempo Médio (dias)" in resumo_resp.columns:
-                    resumo_resp["Tempo Médio (dias)"] = resumo_resp["Tempo Médio (dias)"].round(1)
+                    resumo_resp["Tempo Médio (dias)"] = (resumo_resp["Tempo Médio (dias)"] / 24).round(1)
 
                 _barras_card(resumo_resp, "Leads", "Responsavel", "Leads por responsável", "bar_responsavel")
 
@@ -881,7 +881,7 @@ with aba5:
     def derived_funil(agg, subset_df):
         tempo_sum = agg.get("TempoTotal", 0)
         leads_com_tempo = agg.get("Leads_Com_Tempo", 0)
-        avg = tempo_sum / leads_com_tempo if leads_com_tempo > 0 else 0
+        avg = (tempo_sum / leads_com_tempo / 24) if leads_com_tempo > 0 else 0
         tempo_str = f"{avg:.1f} dias" if avg > 0 else "—"
         return {
             "TempoTotal": tempo_str,
