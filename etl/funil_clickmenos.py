@@ -102,13 +102,20 @@ def _flatten_lead(lead: dict) -> dict:
     else:
         lead.setdefault("Cidade", None)
 
-    # TempoTotalLead: extrai só o número via regex (ex: '1 Hora(s)' → 1)
+    # TempoTotalLead: converte para horas (ignora datas tipo '13/04/2026')
     tempo = lead.get("TempoTotalLead")
+    lead["TempoTotalLead"] = None
     if tempo is not None:
-        m = re.search(r"\d+", str(tempo))
-        lead["TempoTotalLead"] = int(m.group()) if m else None
-    else:
-        lead["TempoTotalLead"] = None
+        s = str(tempo).strip()
+        m = re.search(r"^(\d+)\s*(Dia|Hora|Minuto)", s, re.IGNORECASE)
+        if m:
+            n, unit = int(m.group(1)), m.group(2).lower()
+            if unit.startswith("dia"):
+                lead["TempoTotalLead"] = n * 24
+            elif unit.startswith("hora"):
+                lead["TempoTotalLead"] = n
+            elif unit.startswith("minuto"):
+                lead["TempoTotalLead"] = round(n / 60, 2)
 
     return lead
 
@@ -208,11 +215,12 @@ def _derivar_campos(df: pd.DataFrame) -> pd.DataFrame:
     conds = [
         (etapa_n == "FECHAMENTO") & (status_n == "VENDA GANHA"),
         etapa_n == "VENDA PERDIDA",
-        etapa_n.isin(["FECHAMENTO", "NEGOCIACAO"]),
-        status_n.str.contains(r"VISITA|AGENDAMENTO|AGENDADO", na=False),
+        etapa_n.isin(["FECHAMENTO", "NEGOCIACAO", "POS - ATENDIMENTO"]),
+        status_n.str.contains(r"VISITA|AGENDAMENTO|AGENDADO", na=False)
+        | etapa_n.str.contains(r"AGENDAMENTO", na=False),
         etapa_n == "MARKETING DIGITAL",
-        etapa_n.isin(["PROSPECCAO", "QUALIFICACAO", "ATENDIMENTO"]),
-        etapa_n == "ACOMPANHAMENTO",
+        etapa_n.isin(["PROSPECCAO", "QUALIFICACAO", "ATENDIMENTO", "AGUARDANDO ATENDIMENTO SDR"]),
+        etapa_n.isin(["ACOMPANHAMENTO", "NUTRICAO"]),
     ]
     choices = [
         "Venda Ganha",
