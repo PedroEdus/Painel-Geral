@@ -472,6 +472,153 @@ with aba1:
                 )
                 st.plotly_chart(fig_perda, use_container_width=True)
 
+    # ── Performance Comparativa por Funil ────────────────────────────────────
+    if "Funil" in df_filtrado.columns and "Etapa_NF" in df_filtrado.columns:
+        st.write("")
+        st.subheader("Performance Comparativa de Funil")
+
+        df_comp = df_filtrado.copy()
+        df_comp["_Grupo"] = (
+            df_comp["Funil"]
+            .fillna("")
+            .astype(str)
+            .str.upper()
+            .apply(lambda f: "SDR" if "ATENDIMENTO" in f else "Outros Funis")
+        )
+
+        CORES_GRUPO = {"SDR": _VERDE_BASE, "Outros Funis": "#5b8dee"}
+
+        def _calc_metricas_grupo(df_g: pd.DataFrame) -> dict:
+            total    = len(df_g)
+            ganhas   = int(df_g["Etapa_NF"].eq("Venda Ganha").sum())
+            perdidas = int(df_g["Etapa_NF"].eq("Venda Perdida").sum())
+            negoc    = int(df_g["Etapa_NF"].eq("Negociação").sum())
+            visita   = int(df_g["Etapa_NF"].eq("Visita Agendada").sum())
+            atend    = int(df_g["Etapa_NF"].eq("Em Atendimento").sum())
+            aguard   = int(df_g["Etapa_NF"].eq("Aguardando Atendimento").sum())
+            acomp    = int(df_g["Etapa_NF"].eq("Acompanhamento").sum())
+            pipeline = atend + visita + negoc + ganhas
+            visita_plus = visita + negoc + ganhas
+            negoc_plus  = negoc + ganhas
+            return {
+                "Total":            total,
+                "Aguardando":       aguard,
+                "Em Atendimento":   atend,
+                "Visita Agendada":  visita,
+                "Negociação":       negoc,
+                "Venda Ganha":      ganhas,
+                "Venda Perdida":    perdidas,
+                "Acompanhamento":   acomp,
+                "Conv. Total (%)":  round(ganhas   / total        * 100, 1) if total        else 0.0,
+                "Taxa Perda (%)":   round(perdidas / total        * 100, 1) if total        else 0.0,
+                "Lead→Atend (%)":   round(pipeline / total        * 100, 1) if total        else 0.0,
+                "Atend→Visita (%)": round(visita_plus / pipeline  * 100, 1) if pipeline     else 0.0,
+                "Visita→Negoc (%)": round(negoc_plus / visita_plus* 100, 1) if visita_plus  else 0.0,
+                "Negoc→Ganho (%)":  round(ganhas   / negoc_plus   * 100, 1) if negoc_plus   else 0.0,
+            }
+
+        grupos_dados: dict = {}
+        for _g in ["SDR", "Outros Funis"]:
+            _df_g = df_comp[df_comp["_Grupo"] == _g]
+            if not _df_g.empty:
+                grupos_dados[_g] = _calc_metricas_grupo(_df_g)
+
+        if grupos_dados:
+            # KPI cards — side by side per group
+            g_cols = st.columns(len(grupos_dados))
+            for _ci, (_grupo, _met) in enumerate(grupos_dados.items()):
+                with g_cols[_ci]:
+                    _label = "SDR — Funil de Atendimento" if _grupo == "SDR" else "Outros Funis (agrupados)"
+                    st.markdown(f"**{_label}**")
+                    _ka, _kb, _kc = st.columns(3)
+                    _ka.metric("Total Leads",  _br(_met["Total"]),
+                              help="Total de leads que entraram neste funil no período selecionado.")
+                    _kb.metric("Vendas Ganhas", _br(_met["Venda Ganha"]),
+                              help="Leads que chegaram à etapa Venda Ganha.")
+                    _kc.metric("Conv. Total",  f"{_met['Conv. Total (%)']:.1f}%",
+                              help="Taxa de conversão total: Venda Ganha ÷ Total de Leads.")
+                    _kd, _ke, _kf = st.columns(3)
+                    _kd.metric("Taxa Perda",   f"{_met['Taxa Perda (%)']:.1f}%",
+                              help="% de leads marcados como Venda Perdida sobre o total.")
+                    _ke.metric("Lead→Atend",   f"{_met['Lead→Atend (%)']:.1f}%",
+                              help="% de leads que avançaram para atendimento ativo (saíram de Aguardando Atendimento).")
+                    _kf.metric("Negoc→Ganho",  f"{_met['Negoc→Ganho (%)']:.1f}%",
+                              help="% de leads em Negociação que fecharam como Venda Ganha.")
+
+            st.write("")
+
+            _df_met = pd.DataFrame([{"Grupo": g, **m} for g, m in grupos_dados.items()])
+
+            _col_vol, _col_tx = st.columns(2)
+
+            with _col_vol:
+                _etapas_vol = ["Em Atendimento", "Visita Agendada", "Negociação", "Venda Ganha"]
+                _df_vol = _df_met.melt(
+                    id_vars=["Grupo"], value_vars=_etapas_vol,
+                    var_name="Etapa", value_name="Leads"
+                )
+                _fig_vol = px.bar(
+                    _df_vol, x="Etapa", y="Leads", color="Grupo",
+                    barmode="group",
+                    color_discrete_map=CORES_GRUPO,
+                    template=_tema(),
+                )
+                _fig_vol.update_traces(
+                    texttemplate="%{y:,.0f}", textposition="outside", cliponaxis=False,
+                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                )
+                _fig_vol.update_layout(**{**_LAYOUT_BASE, **dict(
+                    height=320,
+                    title=_titulo_layout("Volume por Etapa do Funil"),
+                    xaxis=dict(title=None),
+                    yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                    legend=dict(
+                        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                        font=dict(family="Manrope, sans-serif", size=11, color="rgba(255,255,255,0.8)"),
+                    ),
+                )})
+                st.plotly_chart(_fig_vol, use_container_width=True)
+
+            with _col_tx:
+                _taxa_vars = ["Lead→Atend (%)", "Atend→Visita (%)", "Visita→Negoc (%)", "Negoc→Ganho (%)"]
+                _df_tx = _df_met.melt(
+                    id_vars=["Grupo"], value_vars=_taxa_vars,
+                    var_name="Etapa", value_name="Taxa (%)"
+                )
+                _fig_tx = px.bar(
+                    _df_tx, x="Etapa", y="Taxa (%)", color="Grupo",
+                    barmode="group",
+                    color_discrete_map=CORES_GRUPO,
+                    template=_tema(),
+                )
+                _fig_tx.update_traces(
+                    texttemplate="%{y:.1f}%", textposition="outside", cliponaxis=False,
+                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                )
+                _fig_tx.update_layout(**{**_LAYOUT_BASE, **dict(
+                    height=320,
+                    title=_titulo_layout("Taxa de Conversão por Etapa (%)"),
+                    xaxis=dict(title=None),
+                    yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                    legend=dict(
+                        orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
+                        font=dict(family="Manrope, sans-serif", size=11, color="rgba(255,255,255,0.8)"),
+                    ),
+                )})
+                st.plotly_chart(_fig_tx, use_container_width=True)
+
+            # Resumo tabular
+            st.write("")
+            _display_cols = [
+                "Grupo", "Total", "Venda Ganha", "Venda Perdida",
+                "Conv. Total (%)", "Taxa Perda (%)",
+                "Lead→Atend (%)", "Atend→Visita (%)", "Visita→Negoc (%)", "Negoc→Ganho (%)",
+            ]
+            st.dataframe(
+                _df_met[_display_cols].set_index("Grupo"),
+                use_container_width=True,
+            )
+
 # ── Aba 2: Origem e Campanhas ─────────────────────────────────────────────────
 with aba2:
     col_orig, col_camp = st.columns(2)
