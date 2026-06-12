@@ -48,6 +48,7 @@ if "DataCadastro" in df.columns:
 
 # List of filters we want to apply
 FILTROS = [
+    ("Funil",             "Funil"),
     ("Etapa NF",          "Etapa_NF"),
     ("On / Off",          "On_Off"),
     ("Produto",           "Produto"),
@@ -297,35 +298,75 @@ with aba1:
     col_a, col_b = st.columns([1.4, 0.9])
     
     with col_a:
-        # Funil de Vendas Plotly
-        contagem = df_filtrado["Etapa_NF"].value_counts().to_dict()
-        funil_data = [
-            {"Etapa_NF": e, "Leads": contagem.get(e, 0)}
-            for e in ORDEM_FUNIL
-            if contagem.get(e, 0) > 0
+        # Funil de Vendas — HTML trapezoid customizado
+        FUNIL_ETAPAS = [
+            ("Aguardando Atendimento", _VERDE_ESCURO),
+            ("Em Atendimento",         _VERDE_MEDIO),
+            ("Visita Agendada",        _VERDE_BASE),
+            ("Negociação",             _VERDE_CLARO),
+            ("Venda Ganha",            _VERDE_BRILHO),
         ]
-        if funil_data:
-            funil_df = pd.DataFrame(funil_data)
-            fig_funil = px.funnel(
-                funil_df,
-                x="Leads", y="Etapa_NF",
-                title="Funil de Vendas",
-                color="Etapa_NF",
-                color_discrete_map=COLOR_MAP,
-                template=_tema(),
-            )
-            fig_funil.update_traces(
-                texttemplate="%{value:,.0f}",
-                textposition="outside",
-                textfont=dict(size=13, color="#ffffff", family="Manrope, sans-serif"),
-            )
-            fig_funil.update_layout(showlegend=False)
-            fig_funil.update_layout(
-                **_LAYOUT_BASE,
-                height=440,
-                title=_titulo_layout("Funil de Vendas"),
-            )
-            st.plotly_chart(fig_funil, use_container_width=True)
+        contagem     = df_filtrado["Etapa_NF"].value_counts().to_dict()
+        etapas_ativas = [(e, c, contagem.get(e, 0)) for e, c in FUNIL_ETAPAS if contagem.get(e, 0) > 0]
+
+        if etapas_ativas:
+            total_base = len(df_filtrado)
+            perdidas   = contagem.get("Venda Perdida", 0)
+            n          = len(etapas_ativas)
+            W_TOP, W_BOT = 90, 32
+            step_w = (W_TOP - W_BOT) / max(n - 1, 1)
+
+            stages_html = ""
+            for i, (etapa, cor, count) in enumerate(etapas_ativas):
+                w     = W_TOP - i * step_w
+                w_n   = W_TOP - (i + 1) * step_w
+                ml    = (100 - w) / 2
+                ml_n  = (100 - w_n) / 2
+                pct   = count / total_base * 100 if total_base else 0
+                stages_html += f"""
+                <div style="position:relative;margin-bottom:3px;">
+                  <div style="
+                    background:{cor};
+                    clip-path:polygon({ml:.2f}% 0%,{100-ml:.2f}% 0%,{100-ml_n:.2f}% 100%,{ml_n:.2f}% 100%);
+                    height:68px;display:flex;align-items:center;justify-content:center;
+                    flex-direction:column;gap:3px;">
+                    <span style="font-size:22px;font-weight:800;color:#fff;
+                      font-family:'JetBrains Mono',monospace;">{_br(count)}</span>
+                    <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.75);
+                      text-transform:uppercase;letter-spacing:1.2px;">{etapa}</span>
+                  </div>
+                  <div style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
+                    color:rgba(255,255,255,0.6);font-size:12px;font-weight:700;
+                    font-family:'JetBrains Mono',monospace;">{pct:.1f}%</div>
+                </div>"""
+
+            perdidas_html = ""
+            if perdidas:
+                pct_p = perdidas / total_base * 100 if total_base else 0
+                perdidas_html = f"""
+                <div style="display:flex;align-items:center;gap:14px;margin-top:14px;
+                  padding:10px 14px;border-radius:6px;
+                  background:rgba(231,76,60,0.10);border:1px solid rgba(231,76,60,0.22);">
+                  <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;
+                    color:rgba(255,255,255,0.45);">Venda Perdida</span>
+                  <span style="font-size:20px;font-weight:800;color:#e74c3c;
+                    font-family:'JetBrains Mono',monospace;">{_br(perdidas)}</span>
+                  <span style="font-size:12px;color:rgba(231,76,60,0.65);
+                    font-family:'JetBrains Mono',monospace;">{pct_p:.1f}%</span>
+                </div>"""
+
+            _html(f"""
+            <div class="pub-card" style="padding:22px 22px 18px;">
+              <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;
+                color:rgba(255,255,255,0.4);margin-bottom:4px;">Base Total</div>
+              <div style="font-size:34px;font-weight:800;color:#fff;
+                font-family:'JetBrains Mono',monospace;margin-bottom:20px;">{_br(total_base)}</div>
+              <div style="padding-right:52px;">
+                {stages_html}
+              </div>
+              {perdidas_html}
+            </div>
+            """)
         else:
             st.info("Sem dados de funil para o período selecionado.")
 

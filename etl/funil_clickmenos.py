@@ -219,8 +219,8 @@ def _derivar_campos(df: pd.DataFrame) -> pd.DataFrame:
         status_n.str.contains(r"VISITA|AGENDAMENTO|AGENDADO", na=False)
         | etapa_n.str.contains(r"AGENDAMENTO", na=False),
         etapa_n == "MARKETING DIGITAL",
-        etapa_n.isin(["PROSPECCAO", "QUALIFICACAO", "ATENDIMENTO", "AGUARDANDO ATENDIMENTO SDR"]),
-        etapa_n.isin(["ACOMPANHAMENTO", "NUTRICAO"]),
+        etapa_n.isin(["PROSPECCAO", "ATENDIMENTO", "EM ATENDIMENTO", "AGUARDANDO ATENDIMENTO SDR"]),
+        etapa_n.isin(["ACOMPANHAMENTO", "NUTRICAO", "QUALIFICACAO"]),
     ]
     choices = [
         "Venda Ganha",
