@@ -41,10 +41,16 @@ def carregar_leads() -> pd.DataFrame:
     if "Codigo" in df.columns:
         df["Codigo"] = pd.to_numeric(df["Codigo"], errors="coerce")
 
-    # Calcula ciclo em horas: diferença entre DataAlteracao e DataCadastro
-    if "DataCadastro" in df.columns and "DataAlteracao" in df.columns:
-        delta = df["DataAlteracao"] - df["DataCadastro"]
-        df["TempoCiclo_h"] = (delta.dt.total_seconds() / 3600).round(1)
-        df.loc[df["TempoCiclo_h"] < 0, "TempoCiclo_h"] = None  # ignora datas invertidas
+    # Calcula ciclo em horas:
+    # - Venda Ganha / Venda Perdida: DataAlteracao - DataCadastro (ciclo encerrado)
+    # - demais etapas: agora - DataCadastro (ciclo ainda aberto)
+    if "DataCadastro" in df.columns and "Etapa_NF" in df.columns:
+        now = pd.Timestamp.now(tz="UTC").tz_localize(None)
+        data_cadastro = pd.to_datetime(df["DataCadastro"]).dt.tz_localize(None)
+        data_alteracao = pd.to_datetime(df.get("DataAlteracao", pd.NaT)).dt.tz_localize(None) if "DataAlteracao" in df.columns else pd.Series(pd.NaT, index=df.index)
+        encerrado = df["Etapa_NF"].isin(["Venda Ganha", "Venda Perdida"])
+        fim = data_alteracao.where(encerrado, other=now)
+        df["TempoCiclo_h"] = ((fim - data_cadastro).dt.total_seconds() / 3600).round(1)
+        df.loc[df["TempoCiclo_h"] < 0, "TempoCiclo_h"] = None
 
     return df
