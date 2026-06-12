@@ -109,6 +109,11 @@ ORDEM_FUNIL = [
 
 POR_PAGINA = 20
 
+def _fmt_h(v) -> str:
+    if v is None or (isinstance(v, float) and pd.isna(v)):
+        return "—"
+    return f"{float(v):.1f}".replace(".", ",") + " h"
+
 def _badge_html(etapa: str) -> str:
     color = COLOR_MAP.get(etapa, "#888888")
     bg    = color + "22"
@@ -271,8 +276,8 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     _t_ganhas_kpi = df_in.loc[
         df_in["Etapa_NF"].eq("Venda Ganha") & df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
     ] if "TempoTotal" in df_in.columns else pd.Series(dtype=float)
-    _tm_geral = round(float(_t_all_kpi.mean()) / 24, 1) if not _t_all_kpi.empty else None
-    _tm_fech  = round(float(_t_ganhas_kpi.mean()) / 24, 1) if not _t_ganhas_kpi.empty else None
+    _tm_geral = round(float(_t_all_kpi.mean()), 1) if not _t_all_kpi.empty else None
+    _tm_fech  = round(float(_t_ganhas_kpi.mean()), 1) if not _t_ganhas_kpi.empty else None
 
     cols = st.columns(10)
     cols[0].metric("Total de Leads", _br(total))
@@ -291,13 +296,13 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     )
     cols[8].metric(
         "Tempo Médio",
-        f"{_tm_geral:.1f} d" if _tm_geral else "—",
-        help="Tempo médio (dias) de todos os leads com tempo registrado."
+        _fmt_h(_tm_geral),
+        help="Tempo médio (horas) de todos os leads com tempo registrado."
     )
     cols[9].metric(
         "Ciclo Fecham.",
-        f"{_tm_fech:.1f} d" if _tm_fech else "—",
-        help="Tempo médio (dias) dos leads que chegaram a Venda Ganha."
+        _fmt_h(_tm_fech),
+        help="Tempo médio (horas) dos leads que chegaram a Venda Ganha."
     )
 
 exibir_kpis(df_filtrado)
@@ -576,9 +581,9 @@ with aba1:
                 "Atend→Visita (%)": round(visita_plus / pipeline  * 100, 1) if pipeline     else 0.0,
                 "Visita→Negoc (%)": round(negoc_plus / visita_plus* 100, 1) if visita_plus  else 0.0,
                 "Negoc→Ganho (%)":  round(ganhas   / negoc_plus   * 100, 1) if negoc_plus   else 0.0,
-                "Tempo Médio (dias)":   round(float(df_g.loc[df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()) / 24, 1)
+                "Tempo Médio (h)":   round(float(df_g.loc[df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()), 1)
                                         if "TempoTotal" in df_g.columns and df_g["TempoTotal"].notna().any() else None,
-                "Ciclo Fecham. (dias)": round(float(df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha") & df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()) / 24, 1)
+                "Ciclo Fecham. (h)": round(float(df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha") & df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()), 1)
                                         if "TempoTotal" in df_g.columns and df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha"), "TempoTotal"].notna().any() else None,
             }
 
@@ -610,11 +615,11 @@ with aba1:
                     _kf.metric("Negoc→Ganho",  f"{_met['Negoc→Ganho (%)']:.1f}%",
                               help="% de leads em Negociação que fecharam como Venda Ganha.")
                     _kg.metric("Tempo Médio",
-                              f"{_met['Tempo Médio (dias)']:.1f} d" if _met.get("Tempo Médio (dias)") else "—",
-                              help="Tempo médio (dias) de todos os leads com tempo registrado.")
+                              _fmt_h(_met.get("Tempo Médio (h)")),
+                              help="Tempo médio (horas) de todos os leads com tempo registrado.")
                     _kh.metric("Ciclo Fecham.",
-                              f"{_met['Ciclo Fecham. (dias)']:.1f} d" if _met.get("Ciclo Fecham. (dias)") else "—",
-                              help="Tempo médio (dias) dos leads que chegaram a Venda Ganha.")
+                              _fmt_h(_met.get("Ciclo Fecham. (h)")),
+                              help="Tempo médio (horas) dos leads que chegaram a Venda Ganha.")
 
             st.write("")
 
@@ -665,25 +670,25 @@ with aba1:
                             _dur_rows.append({
                                 "Grupo": _gn,
                                 "Etapa": _et,
-                                "Dias": round(float(_sub.mean()) / 24, 1),
+                                "Horas": round(float(_sub.mean()), 1),
                             })
                 if _dur_rows:
                     _df_dur = pd.DataFrame(_dur_rows)
                     _fig_dur = px.bar(
-                        _df_dur, x="Etapa", y="Dias", color="Grupo",
+                        _df_dur, x="Etapa", y="Horas", color="Grupo",
                         barmode="group",
                         color_discrete_map=CORES_GRUPO,
                         template=_tema(),
                     )
                     _fig_dur.update_traces(
-                        texttemplate="%{y:.1f}d", textposition="outside", cliponaxis=False,
+                        texttemplate="%{y:.1f}h", textposition="outside", cliponaxis=False,
                         textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
                     )
                     _fig_dur.update_layout(**{**_LAYOUT_BASE, **dict(
                         height=320,
-                        title=_titulo_layout("Duração Média por Etapa (dias)"),
+                        title=_titulo_layout("Duração Média por Etapa (horas)"),
                         xaxis=dict(title=None),
-                        yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                        yaxis=dict(title="Horas", gridcolor="#2a2a2a"),
                         legend=dict(
                             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                             font=dict(family="Manrope, sans-serif", size=11, color="rgba(255,255,255,0.8)"),
@@ -697,7 +702,7 @@ with aba1:
                 "Grupo", "Total", "Venda Ganha", "Venda Perdida",
                 "Conv. Total (%)", "Taxa Perda (%)",
                 "Lead→Atend (%)", "Atend→Visita (%)", "Visita→Negoc (%)", "Negoc→Ganho (%)",
-                "Tempo Médio (dias)", "Ciclo Fecham. (dias)",
+                "Tempo Médio (h)", "Ciclo Fecham. (h)",
             ]
             st.dataframe(
                 _df_met[_display_cols].set_index("Grupo"),
@@ -817,7 +822,7 @@ with aba4:
             if not df_resp.empty:
                 agg: dict = {"Leads": ("Codigo", "count")}
                 if "TempoTotal" in df_resp.columns:
-                    agg["Tempo Médio (dias)"] = ("TempoTotal", "mean")
+                    agg["Tempo Médio (h)"] = ("TempoTotal", "mean")
 
                 resumo_resp = (
                     df_resp.groupby("Responsavel")
@@ -826,12 +831,12 @@ with aba4:
                     .sort_values("Leads", ascending=False)
                     .head(20)
                 )
-                if "Tempo Médio (dias)" in resumo_resp.columns:
-                    resumo_resp["Tempo Médio (dias)"] = (resumo_resp["Tempo Médio (dias)"] / 24).round(1)
+                if "Tempo Médio (h)" in resumo_resp.columns:
+                    resumo_resp["Tempo Médio (h)"] = resumo_resp["Tempo Médio (h)"].round(1)
 
                 _barras_card(resumo_resp, "Leads", "Responsavel", "Leads por responsável", "bar_responsavel")
 
-                if "Tempo Médio (dias)" in resumo_resp.columns:
+                if "Tempo Médio (h)" in resumo_resp.columns:
                     st.subheader("Resumo por responsável")
                     st.dataframe(resumo_resp, hide_index=True, use_container_width=True)
             else:
@@ -870,7 +875,7 @@ with aba5:
         {"header": "Venda Ganha", "key": "Venda_Ganha", "dec": 0},
         {"header": "Venda Perdida", "key": "Venda_Perdida", "dec": 0},
         {"header": "Acompanhamento", "key": "Acompanhamento", "dec": 0},
-        {"header": "Tempo Médio (dias)", "key": "TempoTotal", "is_text": True},
+        {"header": "Tempo Médio (h)", "key": "TempoTotal", "is_text": True},
     ]
     
     agg_rules_funil = {
@@ -889,8 +894,8 @@ with aba5:
     def derived_funil(agg, subset_df):
         tempo_sum = agg.get("TempoTotal", 0)
         leads_com_tempo = agg.get("Leads_Com_Tempo", 0)
-        avg = (tempo_sum / leads_com_tempo / 24) if leads_com_tempo > 0 else 0
-        tempo_str = f"{avg:.1f} dias" if avg > 0 else "—"
+        avg = (tempo_sum / leads_com_tempo) if leads_com_tempo > 0 else 0
+        tempo_str = f"{avg:.1f}".replace(".", ",") + " h" if avg > 0 else "—"
         return {
             "TempoTotal": tempo_str,
         }
