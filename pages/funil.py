@@ -344,19 +344,21 @@ with aba1:
             if perdidas:
                 pct_p = perdidas / total_base * 100 if total_base else 0
                 perdidas_html = f"""
-                <div style="display:flex;align-items:center;gap:14px;margin-top:14px;
+                <div style="position:absolute;top:22px;right:22px;
+                  display:flex;flex-direction:column;align-items:flex-end;gap:2px;
                   padding:10px 14px;border-radius:6px;
                   background:rgba(231,76,60,0.10);border:1px solid rgba(231,76,60,0.22);">
-                  <span style="font-size:10px;text-transform:uppercase;letter-spacing:1.2px;
+                  <span style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
                     color:rgba(255,255,255,0.45);">Venda Perdida</span>
-                  <span style="font-size:20px;font-weight:800;color:#e74c3c;
-                    font-family:'JetBrains Mono',monospace;">{_br(perdidas)}</span>
-                  <span style="font-size:12px;color:rgba(231,76,60,0.65);
+                  <span style="font-size:22px;font-weight:800;color:#e74c3c;
+                    font-family:'JetBrains Mono',monospace;line-height:1;">{_br(perdidas)}</span>
+                  <span style="font-size:11px;color:rgba(231,76,60,0.65);
                     font-family:'JetBrains Mono',monospace;">{pct_p:.1f}%</span>
                 </div>"""
 
             _html(f"""
-            <div class="pub-card" style="padding:22px 22px 18px;">
+            <div class="pub-card" style="padding:22px 22px 18px;position:relative;">
+              {perdidas_html}
               <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;
                 color:rgba(255,255,255,0.4);margin-bottom:4px;">Base Total</div>
               <div style="font-size:34px;font-weight:800;color:#fff;
@@ -364,7 +366,6 @@ with aba1:
               <div style="padding-right:52px;">
                 {stages_html}
               </div>
-              {perdidas_html}
             </div>
             """)
         else:
