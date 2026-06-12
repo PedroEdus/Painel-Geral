@@ -271,11 +271,11 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     p_acomp = f"{acompanhamento / total:.1%} do total" if total else "0% do total"
 
     _t_all_kpi = df_in.loc[
-        df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
-    ] if "TempoTotal" in df_in.columns else pd.Series(dtype=float)
+        df_in["TempoCiclo_h"].notna() & (df_in["TempoCiclo_h"] > 0), "TempoCiclo_h"
+    ] if "TempoCiclo_h" in df_in.columns else pd.Series(dtype=float)
     _t_ganhas_kpi = df_in.loc[
-        df_in["Etapa_NF"].eq("Venda Ganha") & df_in["TempoTotal"].notna() & (df_in["TempoTotal"] > 0), "TempoTotal"
-    ] if "TempoTotal" in df_in.columns else pd.Series(dtype=float)
+        df_in["Etapa_NF"].eq("Venda Ganha") & df_in["TempoCiclo_h"].notna() & (df_in["TempoCiclo_h"] > 0), "TempoCiclo_h"
+    ] if "TempoCiclo_h" in df_in.columns else pd.Series(dtype=float)
     _tm_geral = round(float(_t_all_kpi.mean()), 1) if not _t_all_kpi.empty else None
     _tm_fech  = round(float(_t_ganhas_kpi.mean()), 1) if not _t_ganhas_kpi.empty else None
 
@@ -581,10 +581,10 @@ with aba1:
                 "Atend→Visita (%)": round(visita_plus / pipeline  * 100, 1) if pipeline     else 0.0,
                 "Visita→Negoc (%)": round(negoc_plus / visita_plus* 100, 1) if visita_plus  else 0.0,
                 "Negoc→Ganho (%)":  round(ganhas   / negoc_plus   * 100, 1) if negoc_plus   else 0.0,
-                "Tempo Médio (h)":   round(float(df_g.loc[df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()), 1)
-                                        if "TempoTotal" in df_g.columns and df_g["TempoTotal"].notna().any() else None,
-                "Ciclo Fecham. (h)": round(float(df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha") & df_g["TempoTotal"].notna() & (df_g["TempoTotal"] > 0), "TempoTotal"].mean()), 1)
-                                        if "TempoTotal" in df_g.columns and df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha"), "TempoTotal"].notna().any() else None,
+                "Tempo Médio (h)":   round(float(df_g.loc[df_g["TempoCiclo_h"].notna() & (df_g["TempoCiclo_h"] > 0), "TempoCiclo_h"].mean()), 1)
+                                        if "TempoCiclo_h" in df_g.columns and df_g["TempoCiclo_h"].notna().any() else None,
+                "Ciclo Fecham. (h)": round(float(df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha") & df_g["TempoCiclo_h"].notna() & (df_g["TempoCiclo_h"] > 0), "TempoCiclo_h"].mean()), 1)
+                                        if "TempoCiclo_h" in df_g.columns and df_g.loc[df_g["Etapa_NF"].eq("Venda Ganha"), "TempoCiclo_h"].notna().any() else None,
             }
 
         grupos_dados: dict = {}
@@ -659,12 +659,12 @@ with aba1:
                 _etapas_dur = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação", "Venda Ganha"]
                 _dur_rows = []
                 for _gn, _dg in [(_g, df_comp[df_comp["_Grupo"] == _g]) for _g in grupos_dados]:
-                    if "TempoTotal" not in _dg.columns:
+                    if "TempoCiclo_h" not in _dg.columns:
                         continue
                     for _et in _etapas_dur:
                         _sub = _dg.loc[
-                            _dg["Etapa_NF"].eq(_et) & _dg["TempoTotal"].notna() & (_dg["TempoTotal"] > 0),
-                            "TempoTotal"
+                            _dg["Etapa_NF"].eq(_et) & _dg["TempoCiclo_h"].notna() & (_dg["TempoCiclo_h"] > 0),
+                            "TempoCiclo_h"
                         ]
                         if not _sub.empty:
                             _dur_rows.append({
@@ -821,8 +821,8 @@ with aba4:
             
             if not df_resp.empty:
                 agg: dict = {"Leads": ("Codigo", "count")}
-                if "TempoTotal" in df_resp.columns:
-                    agg["Tempo Médio (h)"] = ("TempoTotal", "mean")
+                if "TempoCiclo_h" in df_resp.columns:
+                    agg["Tempo Médio (h)"] = ("TempoCiclo_h", "mean")
 
                 resumo_resp = (
                     df_resp.groupby("Responsavel")
@@ -862,8 +862,8 @@ with aba5:
     df_mat["Acompanhamento"] = df_mat["Etapa_NF"].eq("Acompanhamento").astype(int)
     
     df_mat["Leads"] = 1
-    df_mat["TempoTotal"] = pd.to_numeric(df_mat["TempoTotal"], errors="coerce").fillna(0.0)
-    df_mat["Leads_Com_Tempo"] = (df_filtrado["TempoTotal"].notna() & (df_filtrado["TempoTotal"] > 0)).astype(int)
+    df_mat["TempoCiclo_h"] = pd.to_numeric(df_mat["TempoCiclo_h"], errors="coerce").fillna(0.0)
+    df_mat["Leads_Com_Tempo"] = (df_filtrado["TempoCiclo_h"].notna() & (df_filtrado["TempoCiclo_h"] > 0)).astype(int)
     
     col_specs_funil = [
         {"header": "Hierarquia (Cidade ➔ Produto ➔ Responsável)", "key": "name"},
@@ -875,7 +875,7 @@ with aba5:
         {"header": "Venda Ganha", "key": "Venda_Ganha", "dec": 0},
         {"header": "Venda Perdida", "key": "Venda_Perdida", "dec": 0},
         {"header": "Acompanhamento", "key": "Acompanhamento", "dec": 0},
-        {"header": "Tempo Médio (h)", "key": "TempoTotal", "is_text": True},
+        {"header": "Tempo Médio (h)", "key": "TempoCiclo_h", "is_text": True},
     ]
     
     agg_rules_funil = {
@@ -887,24 +887,24 @@ with aba5:
         "Venda_Ganha": "sum",
         "Venda_Perdida": "sum",
         "Acompanhamento": "sum",
-        "TempoTotal": "sum",
+        "TempoCiclo_h": "sum",
         "Leads_Com_Tempo": "sum",
     }
     
     def derived_funil(agg, subset_df):
-        tempo_sum = agg.get("TempoTotal", 0)
+        tempo_sum = agg.get("TempoCiclo_h", 0)
         leads_com_tempo = agg.get("Leads_Com_Tempo", 0)
         avg = (tempo_sum / leads_com_tempo) if leads_com_tempo > 0 else 0
         tempo_str = f"{avg:.1f}".replace(".", ",") + " h" if avg > 0 else "—"
         return {
-            "TempoTotal": tempo_str,
+            "TempoCiclo_h": tempo_str,
         }
             
     # Cria o dataframe de download contendo todas as colunas
     colunas_dl = [
         "Codigo", "Nome", "Produto", "Cidade", "DataCadastro",
         "FormaCadastro", "UtmCampaign", "UtmMedium", "UtmSource",
-        "Etapa", "Status", "Etapa_NF", "On_Off", "Responsavel", "TempoTotal",
+        "Etapa", "Status", "Etapa_NF", "On_Off", "Responsavel", "TempoCiclo_h",
     ]
     df_download = df_filtrado[[c for c in colunas_dl if c in df_filtrado.columns]].copy()
         

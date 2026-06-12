@@ -41,4 +41,10 @@ def carregar_leads() -> pd.DataFrame:
     if "Codigo" in df.columns:
         df["Codigo"] = pd.to_numeric(df["Codigo"], errors="coerce")
 
+    # Calcula ciclo em horas: diferença entre DataAlteracao e DataCadastro
+    if "DataCadastro" in df.columns and "DataAlteracao" in df.columns:
+        delta = df["DataAlteracao"] - df["DataCadastro"]
+        df["TempoCiclo_h"] = (delta.dt.total_seconds() / 3600).round(1)
+        df.loc[df["TempoCiclo_h"] < 0, "TempoCiclo_h"] = None  # ignora datas invertidas
+
     return df
