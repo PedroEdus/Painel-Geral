@@ -385,52 +385,54 @@ with col2:
     else:
         st.info("Sem dados para o gráfico de investimento.")
 
-# ── Série Temporal de Investimento (Google Ads + Meta Ads) ────────────────────
-st.subheader("Evolução Temporal do Investimento")
+# ── Série Temporal de Leads CRM por Canal ─────────────────────────────────────
+st.subheader("Evolução Temporal de Leads (CRM por Canal)")
 
-# Gera dados de data diária
-gads_daily = gads.groupby(gads["date"].dt.date)["cost"].sum().reset_index() if not gads.empty else pd.DataFrame(columns=["date", "cost"])
-gads_daily.columns = ["date", "Google Ads"]
-
-meta_daily = meta.groupby("date_start")["spend"].sum().reset_index() if not meta.empty else pd.DataFrame(columns=["date_start", "spend"])
-meta_daily.columns = ["date", "Meta Ads"]
-
-merged_daily = pd.merge(gads_daily, meta_daily, on="date", how="outer").fillna(0.0)
-merged_daily = merged_daily.sort_values("date")
-
-# Cores da série temporal: Google Ads = Amarelo, Meta Ads = Azul
+CANAIS_SERIE = ["Meta Ads", "Google Ads", "Publya"]
+# Cores: Google Ads = Amarelo, Meta Ads = Azul, Publya = Cinza
 BRAND_COLORS_SERIES = {
     "Google Ads": "#FFCC00",
-    "Meta Ads":   "#1877F2"
+    "Meta Ads":   "#1877F2",
+    "Publya":     "#888888",
 }
 
-if not merged_daily.empty:
+if not funil.empty:
+    df_canal = funil.copy()
+    df_canal["Canal_Marketing"] = df_canal.apply(classificar_canal_crm, axis=1)
+    df_canal = df_canal[df_canal["Canal_Marketing"].isin(CANAIS_SERIE)].copy()
+    df_canal["DataCadastro"] = pd.to_datetime(df_canal["DataCadastro"])
+else:
+    df_canal = pd.DataFrame(columns=["DataCadastro", "Canal_Marketing"])
+
+if not df_canal.empty:
     gran_inv = st.radio("Visualização Série Temporal", ["Diário", "Mensal"], horizontal=True, key="time_gran", label_visibility="collapsed")
-    
-    # Preparar DataFrame derretido (melted) para Plotly Stacked
-    df_melt = merged_daily.melt(id_vars=["date"], value_vars=["Google Ads", "Meta Ads"], var_name="Canal", value_name="Investimento")
-    
+
     if gran_inv == "Mensal":
-        df_melt["month"] = pd.to_datetime(df_melt["date"]).dt.to_period("M").dt.to_timestamp()
-        df_monthly = df_melt.groupby(["month", "Canal"], as_index=False)["Investimento"].sum()
-        grafico_barras_mensais(df_monthly, "month", "Investimento", "Investimento por Canal × Mês", color="Canal", color_map=BRAND_COLORS_SERIES)
+        df_canal["month"] = df_canal["DataCadastro"].dt.to_period("M").dt.to_timestamp()
+        df_monthly = (
+            df_canal.groupby(["month", "Canal_Marketing"]).size()
+            .reset_index(name="Leads").rename(columns={"Canal_Marketing": "Canal"})
+        )
+        grafico_barras_mensais(df_monthly, "month", "Leads", "Leads CRM por Canal × Mês", color="Canal", color_map=BRAND_COLORS_SERIES)
     else:
-        # Gráfico de Linhas Diário (para visualizar cruzamentos de investimento de forma nítida)
+        df_canal["dia"] = df_canal["DataCadastro"].dt.normalize()
+        df_daily = df_canal.groupby(["dia", "Canal_Marketing"]).size().reset_index(name="Leads")
+        df_daily.columns = ["date", "Canal", "Leads"]
         fig = px.line(
-            df_melt, 
-            x="date", 
-            y="Investimento", 
-            color="Canal", 
+            df_daily,
+            x="date",
+            y="Leads",
+            color="Canal",
             color_discrete_map=BRAND_COLORS_SERIES,
-            title="Investimento Diário por Canal (Google + Meta)"
+            title="Leads CRM Diários por Canal",
         )
         fig.update_traces(line=dict(width=2.5))
-        fig.update_layout(**{**_LAYOUT_BASE, **dict(height=380, title=_titulo_layout("Investimento Diário por Canal (Google + Meta)"))})
+        fig.update_layout(**{**_LAYOUT_BASE, **dict(height=380, title=_titulo_layout("Leads CRM Diários por Canal"))})
         st.plotly_chart(fig, use_container_width=True)
-        
-    st.caption("⚠️ *Nota: O canal Publya não possui granularidade de data diária/mensal nas tabelas e não entra no gráfico de série temporal, constando apenas nas métricas totais e tabelas comparativas.*")
+
+    st.caption("Leads classificados por canal de marketing (UTM / forma de cadastro). Leads orgânicos/diretos ('Outros') não entram nesta série.")
 else:
-    st.info("Sem dados diários disponíveis para Google Ads e Meta Ads no período selecionado.")
+    st.info("Sem leads CRM classificados por canal pago no período selecionado.")
 
 st.divider()
 
