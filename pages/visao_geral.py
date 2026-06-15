@@ -267,8 +267,11 @@ else:
     paid_ganhas = 0
     tempo_medio_ganhas = None
 
+# CPL CRM = gasto total de mídia ÷ leads que entraram no funil do CRM
+cpl_crm = (total_spend / crm_leads_total) if crm_leads_total else None
+
 st.markdown("<p style='font-size: 14px; font-weight:600; color:rgba(255,255,255,0.6); margin: 15px 0 5px;'>FUNIL E RESULTADOS DE VENDAS (CRM)</p>", unsafe_allow_html=True)
-c_crm1, c_crm2, c_crm3, c_crm4, c_crm5 = st.columns(5)
+c_crm1, c_crm2, c_crm3, c_crm4, c_crm5, c_crm6 = st.columns(6)
 c_crm1.metric("Leads Totais CRM", _br(crm_leads_total))
 c_crm2.metric("Vendas Ganhas", _br(crm_ganhas))
 c_crm3.metric("Taxa Conversão CRM", _br(crm_conversao, 2) + "%")
@@ -277,6 +280,11 @@ c_crm5.metric(
     "Ciclo Fecham.",
     f"{_br(tempo_medio_ganhas, 1)} h" if tempo_medio_ganhas else "—",
     help="Tempo médio (horas) dos leads que chegaram a Venda Ganha. Mesma métrica do painel de funil.",
+)
+c_crm6.metric(
+    "CPL CRM",
+    _br(cpl_crm, 2, "R$ ") if cpl_crm else "—",
+    help="Custo por lead do CRM: gasto total de mídia (Google + Meta + Publya) ÷ leads que entraram no funil.",
 )
 
 st.divider()
