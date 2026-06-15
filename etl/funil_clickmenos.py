@@ -213,14 +213,15 @@ def _derivar_campos(df: pd.DataFrame) -> pd.DataFrame:
     status_n = _norm(df.get("Status", pd.Series([""] * len(df), index=df.index)))
 
     conds = [
-        (etapa_n == "FECHAMENTO") & (status_n == "VENDA GANHA"),
+        ((etapa_n == "FECHAMENTO") & (status_n == "VENDA GANHA")) | (etapa_n == "VENDA GANHA"),
         etapa_n == "VENDA PERDIDA",
-        etapa_n.isin(["FECHAMENTO", "NEGOCIACAO", "POS - ATENDIMENTO"]),
+        etapa_n.isin(["FECHAMENTO", "NEGOCIACAO", "POS - ATENDIMENTO", "PASTA COMPLETA"]),
         status_n.str.contains(r"VISITA|AGENDAMENTO|AGENDADO", na=False)
         | etapa_n.str.contains(r"AGENDAMENTO", na=False),
         etapa_n == "MARKETING DIGITAL",
-        etapa_n.isin(["PROSPECCAO", "ATENDIMENTO", "EM ATENDIMENTO", "AGUARDANDO ATENDIMENTO SDR"]),
-        etapa_n.isin(["ACOMPANHAMENTO", "NUTRICAO", "QUALIFICACAO"]),
+        etapa_n.isin(["PROSPECCAO", "PROSPECT", "ATENDIMENTO", "EM ATENDIMENTO",
+                      "ATENDIMENTO SDR", "AGUARDANDO ATENDIMENTO SDR"]),
+        etapa_n.isin(["ACOMPANHAMENTO", "NUTRICAO", "QUALIFICACAO", "REMARKETING"]),
     ]
     choices = [
         "Venda Ganha",
