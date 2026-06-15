@@ -749,8 +749,9 @@ with aba2:
 
 # ── Aba 3: Cidades e Cadastro ─────────────────────────────────────────────────
 with aba3:
-    col_cid, col_cad = st.columns(2)
-    
+    # Listas maiores lado a lado: Top cidades + Estado de Origem
+    col_cid, col_est = st.columns(2)
+
     with col_cid:
         df_cid = df_filtrado.copy()
         df_cid["Cidade"] = df_cid["Cidade"].fillna("Não Informado").astype(str).str.strip()
@@ -764,20 +765,21 @@ with aba3:
         )
         _barras_card(resumo_cid, "Leads", "Cidade", "Top cidades", "bar_cidades")
 
-    with col_cad:
-        resumo_cad = _agrupar(df_filtrado, "FormaCadastro")
-        _barras_card(resumo_cad, "Leads", "FormaCadastro", "Leads por forma de cadastro", "bar_forma")
-
-    st.write("")
-    col_est, col_orig_cont = st.columns(2)
-    
     with col_est:
         if "Telefone" in df_filtrado.columns:
             df_est = df_filtrado.copy()
             df_est["Estado_Origem"] = df_est["Telefone"].apply(_obter_estado_ddd)
             resumo_est = _agrupar(df_est, "Estado_Origem")
             _barras_card(resumo_est, "Leads", "Estado_Origem", "Estado de Origem (via DDD do Lead)", "bar_estados")
-            
+
+    st.write("")
+    # Listas menores lado a lado: Forma de cadastro + Meio de Contato
+    col_cad, col_orig_cont = st.columns(2)
+
+    with col_cad:
+        resumo_cad = _agrupar(df_filtrado, "FormaCadastro")
+        _barras_card(resumo_cad, "Leads", "FormaCadastro", "Leads por forma de cadastro", "bar_forma")
+
     with col_orig_cont:
         if "OrigemContato" in df_filtrado.columns:
             df_origcont = df_filtrado.copy()
