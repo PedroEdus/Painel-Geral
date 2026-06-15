@@ -364,6 +364,18 @@ with aba1:
                     font-family:'JetBrains Mono',monospace;">{pct:.1f}%</div>
                 </div>"""
 
+                # Taxa de passagem para a próxima etapa
+                if i < len(etapas_ativas) - 1:
+                    prox_count = etapas_ativas[i + 1][2]
+                    conv = prox_count / count * 100 if count else 0
+                    stages_html += f"""
+                <div style="display:flex;justify-content:center;margin:-1px 0 2px;">
+                  <span style="font-size:10px;font-weight:700;color:rgba(0,204,102,0.9);
+                    font-family:'JetBrains Mono',monospace;background:rgba(0,204,102,0.08);
+                    border:1px solid rgba(0,204,102,0.22);border-radius:10px;padding:1px 9px;"
+                    title="Passagem {etapa} → {etapas_ativas[i + 1][0]}">▼ {conv:.1f}%</span>
+                </div>"""
+
             perdidas_html = ""
             if perdidas:
                 pct_p = perdidas / total_base * 100 if total_base else 0
@@ -444,44 +456,6 @@ with aba1:
                     title=_titulo_layout("Distribuição On / Off"),
                 )
                 st.plotly_chart(fig_oo, use_container_width=True)
-
-    # ── Taxa de Passagem entre Etapas (Drop-off do funil) ─────────────────────
-    if "Etapa_NF" in df_filtrado.columns:
-        _cont = df_filtrado["Etapa_NF"].value_counts().to_dict()
-        _total_do = len(df_filtrado)
-        _atend  = _cont.get("Em Atendimento", 0)
-        _visita = _cont.get("Visita Agendada", 0)
-        _negoc  = _cont.get("Negociação", 0)
-        _ganho  = _cont.get("Venda Ganha", 0)
-
-        # Alcance cumulativo: quantos chegaram pelo menos até cada etapa
-        _r_lead   = _total_do
-        _r_atend  = _atend + _visita + _negoc + _ganho
-        _r_visita = _visita + _negoc + _ganho
-        _r_negoc  = _negoc + _ganho
-        _r_ganho  = _ganho
-
-        _etapas_do  = ["Leads", "Em Atendimento", "Visita Agendada", "Negociação", "Venda Ganha"]
-        _valores_do = [_r_lead, _r_atend, _r_visita, _r_negoc, _r_ganho]
-
-        _df_do = pd.DataFrame({"Etapa": _etapas_do, "Leads": _valores_do})
-        if (_df_do["Leads"] > 0).sum() > 1:
-            st.subheader("Taxa de Passagem entre Etapas")
-            _fig_do = px.funnel(_df_do, x="Leads", y="Etapa")
-            _fig_do.update_traces(
-                textinfo="value+percent initial",
-                textfont=dict(size=12, color="#ffffff", family="JetBrains Mono, monospace"),
-                marker=dict(color=[_VERDE_ESCURO, _VERDE_MEDIO, _VERDE_BASE, _VERDE_CLARO, _VERDE_BRILHO]),
-                connector=dict(line=dict(color="rgba(255,255,255,0.15)", width=1)),
-                hovertemplate="%{y}: %{x:,.0f}<extra></extra>",
-            )
-            _fig_do.update_layout(**{**_LAYOUT_BASE, **dict(
-                height=360,
-                title=_titulo_layout("Funil de Conversão — Alcance Cumulativo por Etapa"),
-                xaxis=dict(title=None),
-                yaxis=dict(title=None, categoryorder="array", categoryarray=_etapas_do[::-1]),
-            )})
-            st.plotly_chart(_fig_do, use_container_width=True)
 
     # Evolução temporal de leads (Diário e Mensal)
     if "DataCadastro" in df_filtrado.columns:
