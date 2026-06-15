@@ -64,9 +64,10 @@ global_max = max(max_dates) if max_dates else date(2026, 12, 31)
 limit_min = min(global_min, date(2026, 1, 1))
 limit_max = max(global_max, date(2026, 12, 31))
 
-# Filtro global de período no topo
-periodo_sel = st.date_input(
-    "Período Global", 
+# Filtro global de período na lateral
+st.sidebar.header("Filtros")
+periodo_sel = st.sidebar.date_input(
+    "Período Global",
     value=(date(2026, 1, 1), date(2026, 12, 31)),
     min_value=limit_min,
     max_value=limit_max
