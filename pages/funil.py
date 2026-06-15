@@ -380,8 +380,8 @@ with aba1:
             if perdidas:
                 pct_p = perdidas / total_base * 100 if total_base else 0
                 perdidas_html = f"""
-                <div style="position:absolute;top:22px;right:22px;
-                  display:flex;flex-direction:column;align-items:flex-end;gap:2px;
+                <div style="position:absolute;bottom:22px;left:22px;
+                  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
                   padding:10px 14px;border-radius:6px;
                   background:rgba(231,76,60,0.10);border:1px solid rgba(231,76,60,0.22);">
                   <span style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
