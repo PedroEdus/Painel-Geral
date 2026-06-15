@@ -517,18 +517,23 @@ with aba1:
             
         st.plotly_chart(fig_ev, use_container_width=True)
 
-    # Motivos de Perda de Vendas (Lost Lead Analysis)
-    if "Etapa_NF" in df_filtrado.columns and "Status" in df_filtrado.columns:
-        df_perdidos = df_filtrado[df_filtrado["Etapa_NF"] == "Venda Perdida"]
-        if not df_perdidos.empty:
-            st.write("")
+    # ── Justificativas de Perda + Leads Parados (lado a lado) ─────────────────
+    if "Etapa_NF" in df_filtrado.columns:
+        st.write("")
+        col_perda, col_aging = st.columns(2)
+
+        # Esquerda: motivos de perda
+        with col_perda:
             st.subheader("Justificativas de Perda de Vendas")
-            
-            resumo_perda = df_perdidos["Status"].fillna("Não Informado").astype(str).str.strip()
-            resumo_perda = resumo_perda.loc[resumo_perda != ""].value_counts().reset_index()
-            resumo_perda.columns = ["Motivo", "Leads"]
-            resumo_perda = resumo_perda.head(10)
-            
+            df_perdidos = df_filtrado[df_filtrado["Etapa_NF"] == "Venda Perdida"]
+            if not df_perdidos.empty and "Status" in df_filtrado.columns:
+                resumo_perda = df_perdidos["Status"].fillna("Não Informado").astype(str).str.strip()
+                resumo_perda = resumo_perda.loc[resumo_perda != ""].value_counts().reset_index()
+                resumo_perda.columns = ["Motivo", "Leads"]
+                resumo_perda = resumo_perda.head(10)
+            else:
+                resumo_perda = pd.DataFrame(columns=["Motivo", "Leads"])
+
             if not resumo_perda.empty:
                 fig_perda = px.bar(
                     resumo_perda,
@@ -538,7 +543,7 @@ with aba1:
                     template=_tema(),
                 )
                 fig_perda.update_layout(**{**_LAYOUT_BASE, **dict(
-                    height=360,
+                    height=380,
                     xaxis=dict(title=None, gridcolor="#2a2a2a"),
                     yaxis=dict(title=None, categoryorder="total ascending"),
                     title=_titulo_layout("Principais Motivos de Perda (Top 10)"),
@@ -550,6 +555,71 @@ with aba1:
                     cliponaxis=False,
                 )
                 st.plotly_chart(fig_perda, use_container_width=True)
+            else:
+                st.info("Sem motivos de perda no período.")
+
+        # Direita: leads parados sem movimentação (aging)
+        with col_aging:
+            st.subheader("Leads Parados — sem movimentação")
+            _ATIVOS = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
+            if {"DataAlteracao", "Etapa_NF"}.issubset(df_filtrado.columns):
+                df_ag = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS)].copy()
+                df_ag["DataAlteracao"] = pd.to_datetime(df_ag["DataAlteracao"], errors="coerce")
+                _agora = pd.Timestamp.now()
+                df_ag["DiasParado"] = (_agora - df_ag["DataAlteracao"]).dt.total_seconds() / 86400
+                df_ag = df_ag[df_ag["DiasParado"].notna() & (df_ag["DiasParado"] >= 0)]
+
+                if not df_ag.empty:
+                    _bins   = [-0.01, 3, 7, 14, 30, float("inf")]
+                    _labels = ["0–3 dias", "4–7 dias", "8–14 dias", "15–30 dias", "30+ dias"]
+                    df_ag["Faixa"] = pd.cut(df_ag["DiasParado"], bins=_bins, labels=_labels)
+
+                    resumo_faixa = (
+                        df_ag["Faixa"].value_counts().reindex(_labels).fillna(0).reset_index()
+                    )
+                    resumo_faixa.columns = ["Faixa", "Leads"]
+                    CORES_AGING = {
+                        "0–3 dias":   _VERDE_BRILHO,
+                        "4–7 dias":   _VERDE_BASE,
+                        "8–14 dias":  "#d4a017",
+                        "15–30 dias": "#e67e22",
+                        "30+ dias":   "#e74c3c",
+                    }
+                    fig_ag = px.bar(
+                        resumo_faixa, x="Faixa", y="Leads",
+                        color="Faixa", color_discrete_map=CORES_AGING, template=_tema(),
+                    )
+                    fig_ag.update_traces(
+                        texttemplate="%{y:,.0f}", textposition="outside", cliponaxis=False,
+                        textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                    )
+                    fig_ag.update_layout(**{**_LAYOUT_BASE, **dict(
+                        height=380, showlegend=False,
+                        title=_titulo_layout("Distribuição por Tempo sem Movimentação"),
+                        xaxis=dict(title=None),
+                        yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                    )})
+                    st.plotly_chart(fig_ag, use_container_width=True)
+
+                    df_crit = df_ag[df_ag["DiasParado"] > 7]
+                    if not df_crit.empty and {"Responsavel", "Codigo"}.issubset(df_crit.columns):
+                        resumo_crit = (
+                            df_crit.assign(
+                                Responsavel=df_crit["Responsavel"].fillna("Sem Responsável")
+                                .astype(str).str.strip().replace({"": "Sem Responsável"})
+                            )
+                            .groupby("Responsavel")
+                            .agg(Parados=("Codigo", "count"), Dias_Medio=("DiasParado", "mean"))
+                            .reset_index()
+                            .sort_values("Parados", ascending=False)
+                            .head(10)
+                        )
+                        resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
+                        resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
+                        st.markdown("**Leads ativos parados há mais de 7 dias**")
+                        st.dataframe(resumo_crit, hide_index=True, use_container_width=True)
+                else:
+                    st.info("Sem dados de movimentação (DataAlteracao) para aging.")
 
     # ── Performance Comparativa por Funil ────────────────────────────────────
     if "Funil" in df_filtrado.columns and "Etapa_NF" in df_filtrado.columns:
@@ -883,74 +953,6 @@ with aba4:
                     st.dataframe(resumo_resp, hide_index=True, use_container_width=True)
             else:
                 st.info("Sem dados de responsável para o período.")
-
-    # ── Leads Parados (sem movimentação) ──────────────────────────────────────
-    st.write("")
-    st.subheader("Leads Parados — sem movimentação")
-    _ATIVOS = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
-    if {"DataAlteracao", "Etapa_NF"}.issubset(df_filtrado.columns):
-        df_ag = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS)].copy()
-        df_ag["DataAlteracao"] = pd.to_datetime(df_ag["DataAlteracao"], errors="coerce")
-        _agora = pd.Timestamp.now()
-        df_ag["DiasParado"] = (_agora - df_ag["DataAlteracao"]).dt.total_seconds() / 86400
-        df_ag = df_ag[df_ag["DiasParado"].notna() & (df_ag["DiasParado"] >= 0)]
-
-        if not df_ag.empty:
-            _bins   = [-0.01, 3, 7, 14, 30, float("inf")]
-            _labels = ["0–3 dias", "4–7 dias", "8–14 dias", "15–30 dias", "30+ dias"]
-            df_ag["Faixa"] = pd.cut(df_ag["DiasParado"], bins=_bins, labels=_labels)
-
-            col_ag1, col_ag2 = st.columns(2)
-            with col_ag1:
-                resumo_faixa = (
-                    df_ag["Faixa"].value_counts().reindex(_labels).fillna(0).reset_index()
-                )
-                resumo_faixa.columns = ["Faixa", "Leads"]
-                CORES_AGING = {
-                    "0–3 dias":   _VERDE_BRILHO,
-                    "4–7 dias":   _VERDE_BASE,
-                    "8–14 dias":  "#d4a017",
-                    "15–30 dias": "#e67e22",
-                    "30+ dias":   "#e74c3c",
-                }
-                fig_ag = px.bar(
-                    resumo_faixa, x="Faixa", y="Leads",
-                    color="Faixa", color_discrete_map=CORES_AGING, template=_tema(),
-                )
-                fig_ag.update_traces(
-                    texttemplate="%{y:,.0f}", textposition="outside", cliponaxis=False,
-                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
-                )
-                fig_ag.update_layout(**{**_LAYOUT_BASE, **dict(
-                    height=320, showlegend=False,
-                    title=_titulo_layout("Distribuição por Tempo sem Movimentação"),
-                    xaxis=dict(title=None),
-                    yaxis=dict(title=None, gridcolor="#2a2a2a"),
-                )})
-                st.plotly_chart(fig_ag, use_container_width=True)
-
-            with col_ag2:
-                df_crit = df_ag[df_ag["DiasParado"] > 7]
-                if not df_crit.empty and {"Responsavel", "Codigo"}.issubset(df_crit.columns):
-                    resumo_crit = (
-                        df_crit.assign(
-                            Responsavel=df_crit["Responsavel"].fillna("Sem Responsável")
-                            .astype(str).str.strip().replace({"": "Sem Responsável"})
-                        )
-                        .groupby("Responsavel")
-                        .agg(Parados=("Codigo", "count"), Dias_Medio=("DiasParado", "mean"))
-                        .reset_index()
-                        .sort_values("Parados", ascending=False)
-                        .head(15)
-                    )
-                    resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
-                    resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
-                    st.markdown("**Leads ativos parados há mais de 7 dias**")
-                    st.dataframe(resumo_crit, hide_index=True, use_container_width=True)
-                else:
-                    st.info("Nenhum lead ativo parado há mais de 7 dias.")
-        else:
-            st.info("Sem dados de movimentação (DataAlteracao) para análise de aging.")
 
 # ── Aba 5: Base Analítica ─────────────────────────────────────────────────────
 with aba5:
