@@ -56,6 +56,7 @@ FILTROS = [
     ("Forma de cadastro", "FormaCadastro"),
     ("Campanha",          "UtmCampaign"),
     ("Origem",            "UtmSource"),
+    ("Origem de Contato", "OrigemContato"),
     ("Responsável",       "Responsavel"),
 ]
 
