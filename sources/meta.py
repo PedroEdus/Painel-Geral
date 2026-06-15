@@ -83,9 +83,9 @@ def agregar_por_campanha(df: pd.DataFrame) -> pd.DataFrame:
     agg["CTR (%)"]  = (agg["clicks"] / imp * 100).round(2)
     agg["CPM (R$)"] = (agg["spend"] / imp * 1000).round(2)
 
-    # CPL — custo por lead, usando apenas action__lead
-    if "action__lead" in agg.columns:
-        leads = pd.to_numeric(agg["action__lead"], errors="coerce").replace(0, float("nan"))
+    # CPL — custo por lead, usando a coluna leads combinada (mesma do geral)
+    if "leads" in agg.columns:
+        leads = pd.to_numeric(agg["leads"], errors="coerce").replace(0, float("nan"))
         agg["CPL (R$)"] = (agg["spend"] / leads).round(2)
     else:
         agg["CPL (R$)"] = float("nan")
