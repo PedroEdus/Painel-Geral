@@ -445,6 +445,44 @@ with aba1:
                 )
                 st.plotly_chart(fig_oo, use_container_width=True)
 
+    # ── Taxa de Passagem entre Etapas (Drop-off do funil) ─────────────────────
+    if "Etapa_NF" in df_filtrado.columns:
+        _cont = df_filtrado["Etapa_NF"].value_counts().to_dict()
+        _total_do = len(df_filtrado)
+        _atend  = _cont.get("Em Atendimento", 0)
+        _visita = _cont.get("Visita Agendada", 0)
+        _negoc  = _cont.get("Negociação", 0)
+        _ganho  = _cont.get("Venda Ganha", 0)
+
+        # Alcance cumulativo: quantos chegaram pelo menos até cada etapa
+        _r_lead   = _total_do
+        _r_atend  = _atend + _visita + _negoc + _ganho
+        _r_visita = _visita + _negoc + _ganho
+        _r_negoc  = _negoc + _ganho
+        _r_ganho  = _ganho
+
+        _etapas_do  = ["Leads", "Em Atendimento", "Visita Agendada", "Negociação", "Venda Ganha"]
+        _valores_do = [_r_lead, _r_atend, _r_visita, _r_negoc, _r_ganho]
+
+        _df_do = pd.DataFrame({"Etapa": _etapas_do, "Leads": _valores_do})
+        if (_df_do["Leads"] > 0).sum() > 1:
+            st.subheader("Taxa de Passagem entre Etapas")
+            _fig_do = px.funnel(_df_do, x="Leads", y="Etapa")
+            _fig_do.update_traces(
+                textinfo="value+percent initial",
+                textfont=dict(size=12, color="#ffffff", family="JetBrains Mono, monospace"),
+                marker=dict(color=[_VERDE_ESCURO, _VERDE_MEDIO, _VERDE_BASE, _VERDE_CLARO, _VERDE_BRILHO]),
+                connector=dict(line=dict(color="rgba(255,255,255,0.15)", width=1)),
+                hovertemplate="%{y}: %{x:,.0f}<extra></extra>",
+            )
+            _fig_do.update_layout(**{**_LAYOUT_BASE, **dict(
+                height=360,
+                title=_titulo_layout("Funil de Conversão — Alcance Cumulativo por Etapa"),
+                xaxis=dict(title=None),
+                yaxis=dict(title=None, categoryorder="array", categoryarray=_etapas_do[::-1]),
+            )})
+            st.plotly_chart(_fig_do, use_container_width=True)
+
     # Evolução temporal de leads (Diário e Mensal)
     if "DataCadastro" in df_filtrado.columns:
         st.subheader("Evolução Temporal de Leads")
@@ -774,6 +812,33 @@ with aba3:
             _barras_card(resumo_origcont, "Leads", "OrigemContato", "Meio de Contato (Origem Contato)", "bar_origem_contato")
 
     st.write("")
+    col_fin, col_finmat = st.columns(2)
+
+    with col_fin:
+        if "Finalidade" in df_filtrado.columns:
+            df_fin = df_filtrado.copy()
+            df_fin["Finalidade"] = (
+                df_fin["Finalidade"].fillna("Não Informado").astype(str)
+                .str.strip().replace({"": "Não Informado"})
+            )
+            resumo_fin = _agrupar(df_fin, "Finalidade")
+            _barras_card(resumo_fin, "Leads", "Finalidade", "Finalidade de compra", "bar_finalidade")
+
+    with col_finmat:
+        if {"Finalidade", "Etapa_NF"}.issubset(df_filtrado.columns):
+            df_fv = df_filtrado.copy()
+            df_fv["Finalidade"] = (
+                df_fv["Finalidade"].fillna("Não Informado").astype(str)
+                .str.strip().replace({"": "Não Informado"})
+            )
+            df_fv = df_fv.dropna(subset=["Etapa_NF"])
+            if not df_fv.empty:
+                m = pd.crosstab(df_fv["Finalidade"], df_fv["Etapa_NF"])
+                m["Total"] = m.sum(axis=1)
+                st.subheader("Matriz finalidade × etapa")
+                st.dataframe(m.sort_values("Total", ascending=False), use_container_width=True)
+
+    st.write("")
     col_mat1, col_mat2 = st.columns(2)
     
     with col_mat1:
@@ -841,6 +906,74 @@ with aba4:
                     st.dataframe(resumo_resp, hide_index=True, use_container_width=True)
             else:
                 st.info("Sem dados de responsável para o período.")
+
+    # ── Leads Parados (sem movimentação) ──────────────────────────────────────
+    st.write("")
+    st.subheader("Leads Parados — sem movimentação")
+    _ATIVOS = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
+    if {"DataAlteracao", "Etapa_NF"}.issubset(df_filtrado.columns):
+        df_ag = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS)].copy()
+        df_ag["DataAlteracao"] = pd.to_datetime(df_ag["DataAlteracao"], errors="coerce")
+        _agora = pd.Timestamp.now()
+        df_ag["DiasParado"] = (_agora - df_ag["DataAlteracao"]).dt.total_seconds() / 86400
+        df_ag = df_ag[df_ag["DiasParado"].notna() & (df_ag["DiasParado"] >= 0)]
+
+        if not df_ag.empty:
+            _bins   = [-0.01, 3, 7, 14, 30, float("inf")]
+            _labels = ["0–3 dias", "4–7 dias", "8–14 dias", "15–30 dias", "30+ dias"]
+            df_ag["Faixa"] = pd.cut(df_ag["DiasParado"], bins=_bins, labels=_labels)
+
+            col_ag1, col_ag2 = st.columns(2)
+            with col_ag1:
+                resumo_faixa = (
+                    df_ag["Faixa"].value_counts().reindex(_labels).fillna(0).reset_index()
+                )
+                resumo_faixa.columns = ["Faixa", "Leads"]
+                CORES_AGING = {
+                    "0–3 dias":   _VERDE_BRILHO,
+                    "4–7 dias":   _VERDE_BASE,
+                    "8–14 dias":  "#d4a017",
+                    "15–30 dias": "#e67e22",
+                    "30+ dias":   "#e74c3c",
+                }
+                fig_ag = px.bar(
+                    resumo_faixa, x="Faixa", y="Leads",
+                    color="Faixa", color_discrete_map=CORES_AGING, template=_tema(),
+                )
+                fig_ag.update_traces(
+                    texttemplate="%{y:,.0f}", textposition="outside", cliponaxis=False,
+                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                )
+                fig_ag.update_layout(**{**_LAYOUT_BASE, **dict(
+                    height=320, showlegend=False,
+                    title=_titulo_layout("Distribuição por Tempo sem Movimentação"),
+                    xaxis=dict(title=None),
+                    yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                )})
+                st.plotly_chart(fig_ag, use_container_width=True)
+
+            with col_ag2:
+                df_crit = df_ag[df_ag["DiasParado"] > 7]
+                if not df_crit.empty and {"Responsavel", "Codigo"}.issubset(df_crit.columns):
+                    resumo_crit = (
+                        df_crit.assign(
+                            Responsavel=df_crit["Responsavel"].fillna("Sem Responsável")
+                            .astype(str).str.strip().replace({"": "Sem Responsável"})
+                        )
+                        .groupby("Responsavel")
+                        .agg(Parados=("Codigo", "count"), Dias_Medio=("DiasParado", "mean"))
+                        .reset_index()
+                        .sort_values("Parados", ascending=False)
+                        .head(15)
+                    )
+                    resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
+                    resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
+                    st.markdown("**Leads ativos parados há mais de 7 dias**")
+                    st.dataframe(resumo_crit, hide_index=True, use_container_width=True)
+                else:
+                    st.info("Nenhum lead ativo parado há mais de 7 dias.")
+        else:
+            st.info("Sem dados de movimentação (DataAlteracao) para análise de aging.")
 
 # ── Aba 5: Base Analítica ─────────────────────────────────────────────────────
 with aba5:
