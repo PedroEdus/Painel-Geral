@@ -249,7 +249,14 @@ if not funil.empty:
     crm_ganhas = int(funil_copy["Etapa_NF"].eq("Venda Ganha").sum())
     crm_conversao = (crm_ganhas / crm_leads_total * 100) if crm_leads_total else 0.0
     paid_ganhas = int((funil_copy["Canal_Marketing"].isin(["Google Ads", "Meta Ads", "Publya"]) & funil_copy["Etapa_NF"].eq("Venda Ganha")).sum())
-    tempo_medio_ganhas = funil_copy[funil_copy["Etapa_NF"] == "Venda Ganha"]["TempoTotal"].mean()
+    # Ciclo Fecham. — mesma métrica do painel de funil: média de TempoCiclo_h dos Venda Ganha (horas)
+    _tc_fech = funil_copy.loc[
+        funil_copy["Etapa_NF"].eq("Venda Ganha")
+        & funil_copy["TempoCiclo_h"].notna()
+        & (funil_copy["TempoCiclo_h"] > 0),
+        "TempoCiclo_h",
+    ] if "TempoCiclo_h" in funil_copy.columns else pd.Series(dtype=float)
+    tempo_medio_ganhas = round(float(_tc_fech.mean()), 1) if not _tc_fech.empty else None
 else:
     crm_leads_gads = 0
     crm_leads_meta = 0
@@ -258,7 +265,7 @@ else:
     crm_ganhas = 0
     crm_conversao = 0.0
     paid_ganhas = 0
-    tempo_medio_ganhas = 0.0
+    tempo_medio_ganhas = None
 
 st.markdown("<p style='font-size: 14px; font-weight:600; color:rgba(255,255,255,0.6); margin: 15px 0 5px;'>FUNIL E RESULTADOS DE VENDAS (CRM)</p>", unsafe_allow_html=True)
 c_crm1, c_crm2, c_crm3, c_crm4, c_crm5 = st.columns(5)
@@ -266,7 +273,11 @@ c_crm1.metric("Leads Totais CRM", _br(crm_leads_total))
 c_crm2.metric("Vendas Ganhas", _br(crm_ganhas))
 c_crm3.metric("Taxa Conversão CRM", _br(crm_conversao, 2) + "%")
 c_crm4.metric("Vendas Mídias Pagas", _br(paid_ganhas))
-c_crm5.metric("Tempo Médio Fechamento", f"{_br(tempo_medio_ganhas, 1)} dias" if tempo_medio_ganhas else "—")
+c_crm5.metric(
+    "Ciclo Fecham.",
+    f"{_br(tempo_medio_ganhas, 1)} h" if tempo_medio_ganhas else "—",
+    help="Tempo médio (horas) dos leads que chegaram a Venda Ganha. Mesma métrica do painel de funil.",
+)
 
 st.divider()
 
