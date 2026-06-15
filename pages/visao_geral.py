@@ -134,7 +134,7 @@ gads_conv = 0.0
 meta_cost = meta["spend"].sum() if not meta.empty else 0.0
 meta_clicks = meta["clicks"].sum() if not meta.empty else 0.0
 meta_imp = meta["impressions"].sum() if not meta.empty else 0.0
-meta_leads = meta["action__lead"].sum() if not meta.empty else 0.0
+meta_leads = meta["leads"].sum() if (not meta.empty and "leads" in meta.columns) else 0.0
 
 # Publya
 publya_cost = publya["budget"].sum() if not publya.empty else 0.0
