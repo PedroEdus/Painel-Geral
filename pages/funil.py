@@ -887,52 +887,23 @@ with aba3:
             _barras_card(resumo_origcont, "Leads", "OrigemContato", "Meio de Contato (Origem Contato)", "bar_origem_contato")
 
     st.write("")
-    col_fin, col_finmat = st.columns(2)
-
-    with col_fin:
-        if "Finalidade" in df_filtrado.columns:
-            df_fin = df_filtrado.copy()
-            df_fin["Finalidade"] = (
-                df_fin["Finalidade"].fillna("Não Informado").astype(str)
-                .str.strip().replace({"": "Não Informado"})
-            )
-            resumo_fin = _agrupar(df_fin, "Finalidade")
-            _barras_card(resumo_fin, "Leads", "Finalidade", "Finalidade de compra", "bar_finalidade")
-
-    with col_finmat:
-        if {"Finalidade", "Etapa_NF"}.issubset(df_filtrado.columns):
-            df_fv = df_filtrado.copy()
-            df_fv["Finalidade"] = (
-                df_fv["Finalidade"].fillna("Não Informado").astype(str)
-                .str.strip().replace({"": "Não Informado"})
-            )
-            df_fv = df_fv.dropna(subset=["Etapa_NF"])
-            if not df_fv.empty:
-                m = pd.crosstab(df_fv["Finalidade"], df_fv["Etapa_NF"])
-                m["Total"] = m.sum(axis=1)
-                st.subheader("Matriz finalidade × etapa")
-                st.dataframe(m.sort_values("Total", ascending=False), use_container_width=True)
+    if "Finalidade" in df_filtrado.columns:
+        df_fin = df_filtrado.copy()
+        df_fin["Finalidade"] = (
+            df_fin["Finalidade"].fillna("Não Informado").astype(str)
+            .str.strip().replace({"": "Não Informado"})
+        )
+        resumo_fin = _agrupar(df_fin, "Finalidade")
+        _barras_card(resumo_fin, "Leads", "Finalidade", "Finalidade de compra", "bar_finalidade")
 
     st.write("")
-    col_mat1, col_mat2 = st.columns(2)
-    
-    with col_mat1:
-        if {"Cidade", "Etapa_NF"}.issubset(df_filtrado.columns):
-            df_v = df_filtrado.dropna(subset=["Cidade", "Etapa_NF"])
-            if not df_v.empty:
-                m = pd.crosstab(df_v["Cidade"], df_v["Etapa_NF"])
-                m["Total"] = m.sum(axis=1)
-                st.subheader("Matriz cidade × etapa")
-                st.dataframe(m.sort_values("Total", ascending=False).head(30), use_container_width=True)
-
-    with col_mat2:
-        if {"FormaCadastro", "Etapa_NF"}.issubset(df_filtrado.columns):
-            df_v = df_filtrado.dropna(subset=["FormaCadastro", "Etapa_NF"])
-            if not df_v.empty:
-                m = pd.crosstab(df_v["FormaCadastro"], df_v["Etapa_NF"])
-                m["Total"] = m.sum(axis=1)
-                st.subheader("Matriz forma de cadastro × etapa")
-                st.dataframe(m.sort_values("Total", ascending=False), use_container_width=True)
+    if {"Cidade", "Etapa_NF"}.issubset(df_filtrado.columns):
+        df_v = df_filtrado.dropna(subset=["Cidade", "Etapa_NF"])
+        if not df_v.empty:
+            m = pd.crosstab(df_v["Cidade"], df_v["Etapa_NF"])
+            m["Total"] = m.sum(axis=1)
+            st.subheader("Matriz cidade × etapa")
+            st.dataframe(m.sort_values("Total", ascending=False).head(30), use_container_width=True)
 
 # ── Aba 4: Operação ───────────────────────────────────────────────────────────
 with aba4:
