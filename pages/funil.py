@@ -942,44 +942,68 @@ with aba4:
                     resumo_resp["Tempo Médio (h)"] = resumo_resp["Tempo Médio (h)"].round(1)
 
                 _barras_card(resumo_resp, "Leads", "Responsavel", "Leads por responsável", "bar_responsavel")
-
-                if "Tempo Médio (h)" in resumo_resp.columns:
-                    st.subheader("Resumo por responsável")
-                    st.dataframe(resumo_resp, hide_index=True, use_container_width=True)
             else:
                 st.info("Sem dados de responsável para o período.")
 
-    # ── Leads ativos parados há mais de 7 dias (por responsável) ──────────────
-    _ATIVOS_OP = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
-    if {"DataAlteracao", "Etapa_NF", "Responsavel", "Codigo"}.issubset(df_filtrado.columns):
-        df_ag_op = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS_OP)].copy()
-        df_ag_op["DataAlteracao"] = pd.to_datetime(df_ag_op["DataAlteracao"], errors="coerce")
-        df_ag_op["DiasParado"] = (pd.Timestamp.now() - df_ag_op["DataAlteracao"]).dt.total_seconds() / 86400
-        df_crit = df_ag_op[df_ag_op["DiasParado"].notna() & (df_ag_op["DiasParado"] > 7)]
-        if not df_crit.empty:
-            resumo_crit = (
-                df_crit.assign(
-                    Responsavel=df_crit["Responsavel"].fillna("Sem Responsável")
-                    .astype(str).str.strip().replace({"": "Sem Responsável"})
+    # ── Tabelas lado a lado: Resumo por responsável | Leads parados >7d ────────
+    st.write("")
+    _TBL_H = 460
+    t_resp, t_aging = st.columns(2)
+
+    with t_resp:
+        st.subheader("Resumo por responsável")
+        if {"Responsavel", "Codigo"}.issubset(df_filtrado.columns):
+            df_resp2 = df_filtrado.dropna(subset=["Responsavel"])
+            df_resp2 = df_resp2[df_resp2["Responsavel"].astype(str).str.strip() != ""]
+            if not df_resp2.empty:
+                agg2: dict = {"Leads": ("Codigo", "count")}
+                if "TempoCiclo_h" in df_resp2.columns:
+                    agg2["Tempo Médio (h)"] = ("TempoCiclo_h", "mean")
+                resumo_resp2 = (
+                    df_resp2.groupby("Responsavel")
+                    .agg(**agg2)
+                    .reset_index()
+                    .sort_values("Leads", ascending=False)
+                    .head(20)
                 )
-                .groupby("Responsavel")
-                .agg(Parados=("Codigo", "count"), Dias_Medio=("DiasParado", "mean"))
-                .reset_index()
-                .sort_values("Parados", ascending=False)
-                .head(20)
-            )
-            resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
-            resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
-            st.write("")
-            st.subheader(
-                "Leads ativos parados há mais de 7 dias",
-                help=(
-                    "Leads ativos no funil (Aguardando, Em Atendimento, Visita Agendada, "
-                    "Negociação) sem alteração há mais de 7 dias, agrupados por responsável. "
-                    "Não inclui Venda Ganha nem Venda Perdida."
-                ),
-            )
-            st.dataframe(resumo_crit, hide_index=True, use_container_width=True)
+                if "Tempo Médio (h)" in resumo_resp2.columns:
+                    resumo_resp2["Tempo Médio (h)"] = resumo_resp2["Tempo Médio (h)"].round(1)
+                st.dataframe(resumo_resp2, hide_index=True, use_container_width=True, height=_TBL_H)
+            else:
+                st.info("Sem dados de responsável para o período.")
+
+    with t_aging:
+        st.subheader(
+            "Leads ativos parados há mais de 7 dias",
+            help=(
+                "Leads ativos no funil (Aguardando, Em Atendimento, Visita Agendada, "
+                "Negociação) sem alteração há mais de 7 dias, agrupados por responsável. "
+                "Não inclui Venda Ganha nem Venda Perdida."
+            ),
+        )
+        _ATIVOS_OP = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
+        if {"DataAlteracao", "Etapa_NF", "Responsavel", "Codigo"}.issubset(df_filtrado.columns):
+            df_ag_op = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS_OP)].copy()
+            df_ag_op["DataAlteracao"] = pd.to_datetime(df_ag_op["DataAlteracao"], errors="coerce")
+            df_ag_op["DiasParado"] = (pd.Timestamp.now() - df_ag_op["DataAlteracao"]).dt.total_seconds() / 86400
+            df_crit = df_ag_op[df_ag_op["DiasParado"].notna() & (df_ag_op["DiasParado"] > 7)]
+            if not df_crit.empty:
+                resumo_crit = (
+                    df_crit.assign(
+                        Responsavel=df_crit["Responsavel"].fillna("Sem Responsável")
+                        .astype(str).str.strip().replace({"": "Sem Responsável"})
+                    )
+                    .groupby("Responsavel")
+                    .agg(Parados=("Codigo", "count"), Dias_Medio=("DiasParado", "mean"))
+                    .reset_index()
+                    .sort_values("Parados", ascending=False)
+                    .head(20)
+                )
+                resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
+                resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
+                st.dataframe(resumo_crit, hide_index=True, use_container_width=True, height=_TBL_H)
+            else:
+                st.info("Nenhum lead ativo parado há mais de 7 dias.")
 
 # ── Aba 5: Base Analítica ─────────────────────────────────────────────────────
 with aba5:
