@@ -560,7 +560,16 @@ with aba1:
 
         # Direita: leads parados sem movimentação (aging)
         with col_aging:
-            st.subheader("Leads Parados — sem movimentação")
+            st.subheader(
+                "Leads Parados — sem movimentação",
+                help=(
+                    "Considera apenas leads **ativos** no funil (Aguardando Atendimento, "
+                    "Em Atendimento, Visita Agendada, Negociação). "
+                    "Não inclui Venda Ganha nem Venda Perdida, pois esses já estão "
+                    "encerrados e não fazem mais parte do funil em andamento. "
+                    "Dias parados = hoje − última alteração (DataAlteracao)."
+                ),
+            )
             _ATIVOS = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
             if {"DataAlteracao", "Etapa_NF"}.issubset(df_filtrado.columns):
                 df_ag = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS)].copy()
