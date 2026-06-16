@@ -903,15 +903,6 @@ with aba3:
         resumo_fin = _agrupar(df_fin, "Finalidade")
         _barras_card(resumo_fin, "Leads", "Finalidade", "Finalidade de compra", "bar_finalidade")
 
-    st.write("")
-    if {"Cidade", "Etapa_NF"}.issubset(df_filtrado.columns):
-        df_v = df_filtrado.dropna(subset=["Cidade", "Etapa_NF"])
-        if not df_v.empty:
-            m = pd.crosstab(df_v["Cidade"], df_v["Etapa_NF"])
-            m["Total"] = m.sum(axis=1)
-            st.subheader("Matriz cidade × etapa")
-            st.dataframe(m.sort_values("Total", ascending=False).head(30), use_container_width=True)
-
 # ── Aba 4: Operação ───────────────────────────────────────────────────────────
 with aba4:
     col_prod, col_resp = st.columns(2)
