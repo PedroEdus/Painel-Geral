@@ -570,8 +570,9 @@ with aba1:
                 df_ag = df_ag[df_ag["DiasParado"].notna() & (df_ag["DiasParado"] >= 0)]
 
                 if not df_ag.empty:
-                    _bins   = [-0.01, 3, 7, 14, 30, float("inf")]
-                    _labels = ["0–3 dias", "4–7 dias", "8–14 dias", "15–30 dias", "30+ dias"]
+                    _bins   = [-0.01, 3, 7, 14, 30, 60, 90, 180, float("inf")]
+                    _labels = ["0–3 dias", "4–7 dias", "8–14 dias", "15–30 dias",
+                               "30–60 dias", "60–90 dias", "90–180 dias", "180+ dias"]
                     df_ag["Faixa"] = pd.cut(df_ag["DiasParado"], bins=_bins, labels=_labels)
 
                     resumo_faixa = (
@@ -579,11 +580,14 @@ with aba1:
                     )
                     resumo_faixa.columns = ["Faixa", "Leads"]
                     CORES_AGING = {
-                        "0–3 dias":   _VERDE_BRILHO,
-                        "4–7 dias":   _VERDE_BASE,
-                        "8–14 dias":  "#d4a017",
-                        "15–30 dias": "#e67e22",
-                        "30+ dias":   "#e74c3c",
+                        "0–3 dias":    _VERDE_BRILHO,
+                        "4–7 dias":    _VERDE_BASE,
+                        "8–14 dias":   "#b5a017",
+                        "15–30 dias":  "#d4a017",
+                        "30–60 dias":  "#e67e22",
+                        "60–90 dias":  "#d35400",
+                        "90–180 dias": "#c0392b",
+                        "180+ dias":   "#e74c3c",
                     }
                     fig_ag = px.bar(
                         resumo_faixa, x="Faixa", y="Leads",
