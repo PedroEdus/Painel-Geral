@@ -843,7 +843,40 @@ with aba3:
 
     with col_cad:
         resumo_cad = _agrupar(df_filtrado, "FormaCadastro")
-        _barras_card(resumo_cad, "Leads", "FormaCadastro", "Leads por forma de cadastro", "bar_forma")
+        if not resumo_cad.empty:
+            total_cad = resumo_cad["Leads"].sum()
+            _PALETA_CAD = [_VERDE_BASE, _VERDE_CLARO, _VERDE_ESCURO, _VERDE_BRILHO, _VERDE_MEDIO, "#335544", "#444444"]
+            fig_cad = px.pie(
+                resumo_cad,
+                names="FormaCadastro", values="Leads",
+                hole=0.58,
+                color_discrete_sequence=_PALETA_CAD,
+            )
+            fig_cad.update_traces(
+                textposition="inside",
+                textinfo="percent",
+                insidetextfont=dict(family="JetBrains Mono, monospace", size=11, color="#ffffff"),
+                hovertemplate="%{label}: %{value:,.0f} (%{percent})<extra></extra>",
+                domain=dict(x=[0, 0.62], y=[0, 1]),
+            )
+            fig_cad.add_annotation(
+                text=f"<b>{_br(total_cad)}</b><br><span style='font-size:11px;opacity:0.6'>total</span>",
+                x=0.31, y=0.5, xanchor="center", yanchor="middle", showarrow=False,
+                font=dict(family="JetBrains Mono, monospace", size=14, color="#ffffff"),
+                align="center",
+            )
+            fig_cad.update_layout(
+                template=_tema(), height=440,
+                margin=dict(l=10, r=10, t=50, b=10),
+                legend=dict(
+                    orientation="v", x=0.65, y=0.5, xanchor="left", yanchor="middle",
+                    font=dict(family="Manrope, sans-serif", size=12, color="rgba(255,255,255,0.8)"),
+                ),
+                title=_titulo_layout("Leads por forma de cadastro"),
+            )
+            st.plotly_chart(fig_cad, use_container_width=True)
+        else:
+            st.info("Sem dados de forma de cadastro.")
 
     with col_orig_cont:
         if "OrigemContato" in df_filtrado.columns:
