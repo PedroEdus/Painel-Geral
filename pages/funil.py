@@ -845,17 +845,24 @@ with aba3:
         resumo_cad = _agrupar(df_filtrado, "FormaCadastro")
         if not resumo_cad.empty:
             total_cad = resumo_cad["Leads"].sum()
-            _PALETA_CAD = [_VERDE_BASE, _VERDE_CLARO, _VERDE_ESCURO, _VERDE_BRILHO, _VERDE_MEDIO, "#335544", "#444444"]
+            CORES_CAD = {
+                "Meta":                 _VERDE_BASE,   # verde
+                "Landing page/Google":  "#ffffff",     # branco
+                "Cadastro manual":      "#888888",     # cinza
+            }
+            _cores_slice = [CORES_CAD.get(c, _VERDE_MEDIO) for c in resumo_cad["FormaCadastro"]]
+            _font_cad    = [_font_color_para_fundo(c) for c in _cores_slice]
             fig_cad = px.pie(
                 resumo_cad,
                 names="FormaCadastro", values="Leads",
                 hole=0.58,
-                color_discrete_sequence=_PALETA_CAD,
+                color="FormaCadastro",
+                color_discrete_map=CORES_CAD,
             )
             fig_cad.update_traces(
                 textposition="inside",
                 textinfo="percent",
-                insidetextfont=dict(family="JetBrains Mono, monospace", size=11, color="#ffffff"),
+                insidetextfont=dict(family="JetBrains Mono, monospace", size=11, color=_font_cad),
                 hovertemplate="%{label}: %{value:,.0f} (%{percent})<extra></extra>",
                 domain=dict(x=[0, 0.62], y=[0, 1]),
             )
