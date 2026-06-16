@@ -613,24 +613,6 @@ with aba1:
                         yaxis=dict(title=None, gridcolor="#2a2a2a"),
                     )})
                     st.plotly_chart(fig_ag, use_container_width=True)
-
-                    df_crit = df_ag[df_ag["DiasParado"] > 7]
-                    if not df_crit.empty and {"Responsavel", "Codigo"}.issubset(df_crit.columns):
-                        resumo_crit = (
-                            df_crit.assign(
-                                Responsavel=df_crit["Responsavel"].fillna("Sem Responsável")
-                                .astype(str).str.strip().replace({"": "Sem Responsável"})
-                            )
-                            .groupby("Responsavel")
-                            .agg(Parados=("Codigo", "count"), Dias_Medio=("DiasParado", "mean"))
-                            .reset_index()
-                            .sort_values("Parados", ascending=False)
-                            .head(10)
-                        )
-                        resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
-                        resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
-                        st.markdown("**Leads ativos parados há mais de 7 dias**")
-                        st.dataframe(resumo_crit, hide_index=True, use_container_width=True)
                 else:
                     st.info("Sem dados de movimentação (DataAlteracao) para aging.")
 
@@ -966,6 +948,38 @@ with aba4:
                     st.dataframe(resumo_resp, hide_index=True, use_container_width=True)
             else:
                 st.info("Sem dados de responsável para o período.")
+
+    # ── Leads ativos parados há mais de 7 dias (por responsável) ──────────────
+    _ATIVOS_OP = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
+    if {"DataAlteracao", "Etapa_NF", "Responsavel", "Codigo"}.issubset(df_filtrado.columns):
+        df_ag_op = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS_OP)].copy()
+        df_ag_op["DataAlteracao"] = pd.to_datetime(df_ag_op["DataAlteracao"], errors="coerce")
+        df_ag_op["DiasParado"] = (pd.Timestamp.now() - df_ag_op["DataAlteracao"]).dt.total_seconds() / 86400
+        df_crit = df_ag_op[df_ag_op["DiasParado"].notna() & (df_ag_op["DiasParado"] > 7)]
+        if not df_crit.empty:
+            resumo_crit = (
+                df_crit.assign(
+                    Responsavel=df_crit["Responsavel"].fillna("Sem Responsável")
+                    .astype(str).str.strip().replace({"": "Sem Responsável"})
+                )
+                .groupby("Responsavel")
+                .agg(Parados=("Codigo", "count"), Dias_Medio=("DiasParado", "mean"))
+                .reset_index()
+                .sort_values("Parados", ascending=False)
+                .head(20)
+            )
+            resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
+            resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
+            st.write("")
+            st.subheader(
+                "Leads ativos parados há mais de 7 dias",
+                help=(
+                    "Leads ativos no funil (Aguardando, Em Atendimento, Visita Agendada, "
+                    "Negociação) sem alteração há mais de 7 dias, agrupados por responsável. "
+                    "Não inclui Venda Ganha nem Venda Perdida."
+                ),
+            )
+            st.dataframe(resumo_crit, hide_index=True, use_container_width=True)
 
 # ── Aba 5: Base Analítica ─────────────────────────────────────────────────────
 with aba5:
