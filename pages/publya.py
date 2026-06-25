@@ -3,7 +3,7 @@ import streamlit as st
 from datetime import date, timedelta
 
 from core.theme import aplicar_tema
-from core.ui import exibir_logo, kpis, botao_download_csv
+from core.ui import cabecalho, exibir_logo, kpis, botao_download_csv
 from core.format import (
     _br, 
     _font_color_para_fundo,
@@ -22,7 +22,7 @@ from sources.publya import carregar_publya
 # Apply visual theme
 aplicar_tema()
 
-st.title("Campanhas Publya")
+cabecalho("Campanhas Publya", "Performance de mídia programática")
 
 # ── Carregar Dados ────────────────────────────────────────────────────────────
 with st.spinner("Carregando dados da Publya..."):
@@ -134,7 +134,7 @@ def _segmentos_html(df_camp: pd.DataFrame, coluna: str, total_camp: float, max_v
         html += (
             f'<div title="{tooltip}" style="width:{seg_w:.2f}%;height:100%;background:{color};flex-shrink:0;'
             f'display:inline-flex;align-items:center;justify-content:center;overflow:hidden;cursor:default;'
-            f'font-family:JetBrains Mono,monospace;font-size:10px;font-weight:500;color:{fc}">'
+            f'font-family:Roboto Condensed,sans-serif;font-size:10px;font-weight:500;color:{fc}">'
             f'{label}</div>'
         )
     return html
@@ -283,10 +283,10 @@ def exibir_tabela_campanhas_publya(df_tab):
         if col and col in row.index and pd.notna(row[col]):
             val = float(row[col])
             # Semáforo de aproveitamento (verde >= 80, amarelo 50-79, vermelho < 50)
-            cor = "#008140" if val >= 80 else ("#d4a017" if val >= 50 else "#c0392b")
+            cor = "#2a9d45" if val >= 80 else ("#f59e0b" if val >= 50 else "#ef4444")
             return (f'<span style="display:inline-flex;align-items:center">{_dot(cor)}'
-                    f'<span style="font-family:JetBrains Mono,monospace;font-size:12px">{_br(val, 2)}%</span>'
-                    f'<span style="font-size:10px;color:rgba(255,255,255,0.45);margin-left:4px">{label}</span></span>')
+                    f'<span style="font-family:Roboto Condensed,sans-serif;font-size:12px">{_br(val, 2)}%</span>'
+                    f'<span style="font-size:10px;color:#8f8f96;margin-left:4px">{label}</span></span>')
         return "—"
 
     header = ("<tr><th>Campanha</th><th>Tipo</th><th class='num'>Impressões</th><th class='num'>Cliques</th>"
@@ -301,9 +301,9 @@ def exibir_tabela_campanhas_publya(df_tab):
             cpc_val = float(row["CPC (R$)"])
             # Semáforo de CPC (verde < 90% da média, amarelo 90-120%, vermelho > 120%)
             cpc_ratio = cpc_val / avg_cpc if avg_cpc else 1.0
-            cor_c = "#008140" if cpc_ratio <= 0.90 else ("#d4a017" if cpc_ratio <= 1.20 else "#c0392b")
+            cor_c = "#2a9d45" if cpc_ratio <= 0.90 else ("#f59e0b" if cpc_ratio <= 1.20 else "#ef4444")
             cpc_html = (f'<span style="display:inline-flex;align-items:center">{_dot(cor_c)}'
-                        f'<span style="font-family:JetBrains Mono,monospace;font-size:12px">{_br(cpc_val, 2, "R$ ")}</span></span>')
+                        f'<span style="font-family:Roboto Condensed,sans-serif;font-size:12px">{_br(cpc_val, 2, "R$ ")}</span></span>')
 
         rows_html += (
             f'<tr>'

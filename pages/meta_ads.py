@@ -3,7 +3,7 @@ import streamlit as st
 from datetime import date
 
 from core.theme import aplicar_tema
-from core.ui import exibir_logo, kpis, botao_download_csv
+from core.ui import cabecalho, exibir_logo, kpis, botao_download_csv
 from core.format import (
     _br, 
     _rgba,
@@ -27,7 +27,7 @@ from sources.meta import carregar_dados, agregar_por_campanha
 
 aplicar_tema()
 
-st.title("Meta Ads — Campanhas")
+cabecalho("Meta Ads — Campanhas", "Performance de campanhas Meta")
 
 # ── Carregar Dados ────────────────────────────────────────────────────────────
 with st.spinner("Carregando dados do Meta Ads..."):
@@ -112,7 +112,10 @@ df_filtrado = agregar_por_campanha(df)
 
 n_camps = df_filtrado["campaign_name"].nunique() if "campaign_name" in df_filtrado.columns else 0
 n_active = df_filtrado[df_filtrado["campaign_name"].isin(active_campaigns_meta)]["campaign_name"].nunique() if "campaign_name" in df_filtrado.columns else 0
-st.caption(f"{n_camps} campanha(s) exibida(s) · {n_active} ativa(s)")
+st.markdown(
+    f"<div style='font-size:13px;color:#232329;'>{n_camps} campanha(s) exibida(s) · {n_active} ativa(s)</div>",
+    unsafe_allow_html=True,
+)
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 # Calcula totais
@@ -200,7 +203,7 @@ with aba_imp:
         grafico_donut(df, "Tipo_Lancamento", "impressions", "Impressões por tipo", color_map=LANCAMENTO_COLOR_MAP)
 
 with aba_clk:
-    grafico_evolucao(df, "date_start", "clicks", "Cliques", cor="#00b359", fmt=lambda v: _br(v), key="meta_clicks")
+    grafico_evolucao(df, "date_start", "clicks", "Cliques", cor="#4ab861", fmt=lambda v: _br(v), key="meta_clicks")
     col1, col2 = st.columns(2)
     with col1:
         grafico_donut(df, "objective", "clicks", "Cliques por objetivo", color_map=obj_color_label, label_func=label_obj)
@@ -229,6 +232,10 @@ with aba_tab:
     n_camps = df_filtrado["campaign_name"].nunique() if "campaign_name" in df_filtrado.columns else 0
     n_active = df_filtrado[df_filtrado["campaign_name"].isin(active_campaigns_meta)]["campaign_name"].nunique() if "campaign_name" in df_filtrado.columns else 0
     
-    st.caption(f"{n_camps} campanha(s) exibida(s) · {n_active} ativa(s) · Clique em ▶ para expandir")
+    st.markdown(
+        f"<div style='font-size:13px;color:#232329;'>{n_camps} campanha(s) exibida(s) · "
+        f"{n_active} ativa(s) · Clique em ▶ para expandir</div>",
+        unsafe_allow_html=True,
+    )
     exibir_matriz_meta(df, active_campaigns_meta, df_filtrado)
 

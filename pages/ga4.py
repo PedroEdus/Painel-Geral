@@ -3,7 +3,7 @@ import streamlit as st
 from datetime import date
 
 from core.theme import aplicar_tema
-from core.ui import exibir_logo, kpis, botao_download_csv
+from core.ui import cabecalho, exibir_logo, kpis, botao_download_csv
 from core.format import _br, CANAL_COLORS
 from core.charts import (
     grafico_barras_mensais,
@@ -15,7 +15,7 @@ from sources.ga4 import carregar_overview, carregar_utm, classificar_canal
 # Apply unified design system
 aplicar_tema()
 
-st.title("Google Analytics 4 — Buriti")
+cabecalho("Google Analytics 4 — Buriti", "Tráfego e comportamento do site")
 
 # ── Carregar Dados ────────────────────────────────────────────────────────────
 with st.spinner("Carregando dados do Google Analytics 4..."):
@@ -134,7 +134,7 @@ with aba_inst:
         if not df_utm_inst.empty else pd.DataFrame()
     )
 
-    st.caption("Propriedades institucionais comparadas: BURITI EMPREENDIMENTOS · Buriti Institucional · BTSA | Site Institucional")
+    st.markdown("<span style='font-size:13px;color:#6b6b74;font-family:Segoe UI,sans-serif;'>📊 Propriedades institucionais comparadas: <b>BURITI EMPREENDIMENTOS · Buriti Institucional · BTSA | Site Institucional</b></span>", unsafe_allow_html=True)
 
     if ov_inst.empty:
         st.info("Nenhum dado institucional no período selecionado.")
@@ -165,8 +165,8 @@ with aba_inst:
             grafico_barras_mensais(monthly_inst, "month", "sessions", "Sessões por mês")
         with col2:
             if not utm_inst.empty:
-                canal_inst = utm_inst.groupby("canal", as_index=False)["sessions"].sum()
-                grafico_barras_h_card(canal_inst, "sessions", "canal", "Distribuição por Canal", color="#004d26")
+                canal_inst = utm_inst.groupby("canal", as_index=False)["sessions"].sum().sort_values("sessions", ascending=False)
+                grafico_barras_mensais(canal_inst, "canal", "sessions", "Distribuição por Canal")
 
         if not utm_inst.empty:
             st.divider()
@@ -258,8 +258,8 @@ with aba_utm:
             utm_f = utm_f[utm_f["sessionManualAdContent"].isin(sel_conts)]
 
         st.divider()
-        canal_df = utm_f.groupby("canal", as_index=False)["sessions"].sum()
-        grafico_barras_h_card(canal_df, "sessions", "canal", "Distribuição por Canal")
+        canal_df = utm_f.groupby("canal", as_index=False)["sessions"].sum().sort_values("sessions", ascending=False)
+        grafico_barras_mensais(canal_df, "canal", "sessions", "Distribuição por Canal")
 
         st.divider()
         col3, col4 = st.columns(2)

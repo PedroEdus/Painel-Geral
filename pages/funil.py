@@ -4,15 +4,15 @@ import plotly.express as px
 from datetime import date
 
 from core.theme import aplicar_tema
-from core.ui import exibir_logo, kpis as render_kpis, botao_download_csv
+from core.ui import cabecalho, exibir_logo, kpis as render_kpis, botao_download_csv
 from core.format import _br, _font_color_para_fundo, _rgba, VERDE
-from core.charts import _LAYOUT_BASE, _titulo_layout, _tema, _html, tabela_matriz_html
+from core.charts import _LAYOUT_BASE, _titulo_layout, _tema, _html, dataframe_card, tabela_matriz_html, trapezio_svg, grafico_donut, grafico_evolucao
 from sources.funil import carregar_leads
 
 # Apply unified design system and styles
 aplicar_tema()
 
-st.title("Funil Buriti — CRM Leads")
+cabecalho("Funil BTSA — CRM Leads", "CRM · jornada de leads")
 
 # ── Carregar Dados ────────────────────────────────────────────────────────────
 with st.spinner("Carregando dados do CRM..."):
@@ -80,12 +80,12 @@ if df_filtrado.empty:
 st.caption(f"{len(df_filtrado):,} lead(s) exibido(s)")
 
 # ── Paleta e Mapeamentos CRM ──────────────────────────────────────────────────
-_VERDE_BASE   = "#008140"
-_VERDE_ESCURO = "#004d26"
-_VERDE_MEDIO  = "#006633"
-_VERDE_CLARO  = "#00a851"
-_VERDE_BRILHO = "#00cc66"
-_BRANCO       = "#ffffff"
+_VERDE_BASE   = "#2a9d45"
+_VERDE_ESCURO = "#174f23"
+_VERDE_MEDIO  = "#1a6229"
+_VERDE_CLARO  = "#4ab861"
+_VERDE_BRILHO = "#7dd190"
+_BRANCO       = "#8f8f96"
 
 COLOR_MAP = {
     "Aguardando Atendimento": _VERDE_ESCURO,
@@ -280,7 +280,7 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     _tm_geral = round(float(_t_all_kpi.mean()), 1) if not _t_all_kpi.empty else None
     _tm_fech  = round(float(_t_ganhas_kpi.mean()), 1) if not _t_ganhas_kpi.empty else None
 
-    cols = st.columns(10)
+    cols = st.columns(7)
     cols[0].metric("Total de Leads", _br(total))
     cols[1].metric("Aguardando", _br(aguardando))
     cols[2].metric("Em Atendimento", _br(atendimento))
@@ -288,30 +288,14 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     cols[4].metric("Negociação", _br(negociacao))
     cols[5].metric("Venda Ganha", _br(ganhas), delta=p_ganhas, delta_color="normal")
     cols[6].metric("Venda Perdida", _br(perdidas), delta=p_perdidas, delta_color="inverse")
-    cols[7].metric(
-        "Acompanhamento",
-        _br(acompanhamento),
-        delta=p_acomp,
-        delta_color="off",
-        help="Leads identificados como oportunidades futuras — fora do funil ativo."
-    )
-    cols[8].metric(
-        "Tempo Médio",
-        _fmt_h(_tm_geral),
-        help="Tempo médio (horas) de todos os leads com tempo registrado."
-    )
-    cols[9].metric(
-        "Ciclo Fecham.",
-        _fmt_h(_tm_fech),
-        help="Tempo médio (horas) dos leads que chegaram a Venda Ganha."
-    )
 
 exibir_kpis(df_filtrado)
 st.divider()
 
 # ── Abas ──────────────────────────────────────────────────────────────────────
-aba1, aba2, aba3, aba4, aba5 = st.tabs([
+aba1, aba_perdas, aba2, aba3, aba4, aba5 = st.tabs([
     "Funil",
+    "Perdas & Desempenho",
     "Origem e Campanhas",
     "Cidades e Cadastro",
     "Operação",
@@ -349,20 +333,18 @@ with aba1:
                 ml_n  = (100 - w_n) / 2
                 pct   = count / total_base * 100 if total_base else 0
                 stages_html += f"""
-                <div style="position:relative;margin-bottom:3px;">
-                  <div style="
-                    background:{cor};
-                    clip-path:polygon({ml:.2f}% 0%,{100-ml:.2f}% 0%,{100-ml_n:.2f}% 100%,{ml_n:.2f}% 100%);
-                    height:68px;display:flex;align-items:center;justify-content:center;
-                    flex-direction:column;gap:3px;">
+                <div style="position:relative;margin-bottom:3px;height:83px;">
+                  {trapezio_svg(ml, ml_n, cor, h=83)}
+                  <div style="position:absolute;inset:0;display:flex;align-items:center;
+                    justify-content:center;flex-direction:column;gap:3px;pointer-events:none;">
                     <span style="font-size:22px;font-weight:800;color:#fff;
-                      font-family:'JetBrains Mono',monospace;">{_br(count)}</span>
-                    <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.75);
+                      font-family:'Roboto Condensed',sans-serif;">{_br(count)}</span>
+                    <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.82);
                       text-transform:uppercase;letter-spacing:1.2px;">{etapa}</span>
                   </div>
                   <div style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
-                    color:rgba(255,255,255,0.6);font-size:12px;font-weight:700;
-                    font-family:'JetBrains Mono',monospace;">{pct:.1f}%</div>
+                    color:#6b6b74;font-size:12px;font-weight:700;
+                    font-family:'Roboto Condensed',sans-serif;">{pct:.1f}%</div>
                 </div>"""
 
                 # Taxa de passagem para a próxima etapa
@@ -372,7 +354,7 @@ with aba1:
                     stages_html += f"""
                 <div style="display:flex;justify-content:center;margin:-1px 0 2px;">
                   <span style="font-size:10px;font-weight:700;color:rgba(0,204,102,0.9);
-                    font-family:'JetBrains Mono',monospace;background:rgba(0,204,102,0.08);
+                    font-family:'Roboto Condensed',sans-serif;background:rgba(0,204,102,0.08);
                     border:1px solid rgba(0,204,102,0.22);border-radius:10px;padding:1px 9px;"
                     title="Passagem {etapa} → {etapas_ativas[i + 1][0]}">▼ {conv:.1f}%</span>
                 </div>"""
@@ -386,20 +368,20 @@ with aba1:
                   padding:10px 14px;border-radius:6px;
                   background:rgba(231,76,60,0.10);border:1px solid rgba(231,76,60,0.22);">
                   <span style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
-                    color:rgba(255,255,255,0.45);">Venda Perdida</span>
-                  <span style="font-size:22px;font-weight:800;color:#e74c3c;
-                    font-family:'JetBrains Mono',monospace;line-height:1;">{_br(perdidas)}</span>
+                    color:#8f8f96;">Venda Perdida</span>
+                  <span style="font-size:22px;font-weight:800;color:#ef4444;
+                    font-family:'Roboto Condensed',sans-serif;line-height:1;">{_br(perdidas)}</span>
                   <span style="font-size:11px;color:rgba(231,76,60,0.65);
-                    font-family:'JetBrains Mono',monospace;">{pct_p:.1f}%</span>
+                    font-family:'Roboto Condensed',sans-serif;">{pct_p:.1f}%</span>
                 </div>"""
 
             _html(f"""
             <div class="pub-card" style="padding:22px 22px 18px;position:relative;">
               {perdidas_html}
               <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;
-                color:rgba(255,255,255,0.4);margin-bottom:4px;">Base Total</div>
-              <div style="font-size:34px;font-weight:800;color:#fff;
-                font-family:'JetBrains Mono',monospace;margin-bottom:20px;">{_br(total_base)}</div>
+                color:#8f8f96;margin-bottom:4px;">Base Total</div>
+              <div style="font-size:34px;font-weight:800;color:#232329;
+                font-family:'Roboto Condensed',sans-serif;margin-bottom:20px;">{_br(total_base)}</div>
               <div style="padding-right:52px;">
                 {stages_html}
               </div>
@@ -413,110 +395,63 @@ with aba1:
         if "On_Off" in df_filtrado.columns:
             resumo_onoff = _agrupar(df_filtrado, "On_Off")
             if not resumo_onoff.empty:
-                total_oo = resumo_onoff["Leads"].sum()
-                resumo_onoff["_pct"]  = (resumo_onoff["Leads"] / total_oo * 100).round(1) if total_oo else 0
-                resumo_onoff["_text"] = resumo_onoff.apply(
-                    lambda r: f"{_br(r['Leads'])}<br>{r['_pct']:.1f}%" if r["_pct"] >= 5 else "",
-                    axis=1,
-                )
-                font_colors = [
-                    _font_color_para_fundo(COLOR_MAP.get(cat, "#888888"))
-                    for cat in resumo_onoff["On_Off"]
-                ]
+                grafico_donut(resumo_onoff, "On_Off", "Leads", "Distribuição On / Off", altura=340)
 
-                fig_oo = px.pie(
-                    resumo_onoff,
-                    names="On_Off", values="Leads",
-                    hole=0.58, title="Distribuição On / Off",
-                    color="On_Off", color_discrete_map=COLOR_MAP,
-                )
-                fig_oo.update_traces(
-                    text=resumo_onoff["_text"].tolist(),
-                    textposition="inside",
-                    textinfo="text",
-                    insidetextfont=dict(family="JetBrains Mono, monospace", size=11, color=font_colors),
-                    hovertemplate="%{label}: %{value:,.0f} (%{percent})",
-                    domain=dict(x=[0, 0.62], y=[0, 1]),
-                )
-                fig_oo.add_annotation(
-                    text=f"<b>{_br(total_oo)}</b><br><span style='font-size:11px;opacity:0.6'>total</span>",
-                    x=0.31, y=0.5,
-                    xanchor="center", yanchor="middle",
-                    showarrow=False,
-                    font=dict(family="JetBrains Mono, monospace", size=14, color="#ffffff"),
-                    align="center",
-                )
-                fig_oo.update_layout(
-                    template=_tema(), height=440,
-                    margin=dict(l=10, r=10, t=50, b=10),
-                    legend=dict(
-                        orientation="v", x=0.65, y=0.5,
-                        xanchor="left", yanchor="middle",
-                        font=dict(family="Manrope, sans-serif", size=12, color="rgba(255,255,255,0.8)"),
-                    ),
-                    title=_titulo_layout("Distribuição On / Off"),
-                )
-                st.plotly_chart(fig_oo, use_container_width=True)
+        # Métricas de tempo e acompanhamento abaixo do donut
+        _acomp = int(df_filtrado["Etapa_NF"].eq("Acompanhamento").sum()) if "Etapa_NF" in df_filtrado.columns else 0
+        _pct_acomp = f"{_acomp / len(df_filtrado):.1%}" if len(df_filtrado) else "—"
+        _t_all = df_filtrado.loc[
+            df_filtrado["TempoCiclo_h"].notna() & (df_filtrado["TempoCiclo_h"] > 0), "TempoCiclo_h"
+        ] if "TempoCiclo_h" in df_filtrado.columns else pd.Series(dtype=float)
+        _t_ganhas = df_filtrado.loc[
+            df_filtrado["Etapa_NF"].eq("Venda Ganha") & df_filtrado["TempoCiclo_h"].notna() & (df_filtrado["TempoCiclo_h"] > 0), "TempoCiclo_h"
+        ] if "TempoCiclo_h" in df_filtrado.columns else pd.Series(dtype=float)
+        _tm = round(float(_t_all.mean()), 1) if not _t_all.empty else None
+        _tf = round(float(_t_ganhas.mean()), 1) if not _t_ganhas.empty else None
 
-    # Evolução temporal de leads (Diário e Mensal)
+        _html(f"""
+        <div class="pub-card" style="padding:18px 20px 20px;">
+          <div style="font-size:14px;font-weight:600;color:#6b6b74;
+            font-family:'Segoe UI',sans-serif;margin-bottom:14px;">Tempos &amp; Acompanhamento</div>
+
+          <div style="margin-bottom:4px;">
+            <div style="font-size:28px;font-weight:800;color:#2a9d45;
+              font-family:'Roboto Condensed',sans-serif;line-height:1.1;">{_br(_acomp)}</div>
+            <div style="font-size:12px;color:#232329;margin-top:3px;
+              font-family:'Segoe UI',sans-serif;">Leads em Acompanhamento — {_pct_acomp} do total.</div>
+          </div>
+
+          <div style="border-top:1px solid #ececed;margin:12px 0;"></div>
+
+          <div style="margin-bottom:4px;">
+            <div style="font-size:28px;font-weight:800;color:#8f8f96;
+              font-family:'Roboto Condensed',sans-serif;line-height:1.1;">{_fmt_h(_tm)}</div>
+            <div style="font-size:12px;color:#232329;margin-top:3px;
+              font-family:'Segoe UI',sans-serif;">Tempo médio de todos os leads com ciclo registrado.</div>
+          </div>
+
+          <div style="border-top:1px solid #ececed;margin:12px 0;"></div>
+
+          <div>
+            <div style="font-size:28px;font-weight:800;color:#8f8f96;
+              font-family:'Roboto Condensed',sans-serif;line-height:1.1;">{_fmt_h(_tf)}</div>
+            <div style="font-size:12px;color:#232329;margin-top:3px;
+              font-family:'Segoe UI',sans-serif;">Ciclo médio de fechamento (Venda Ganha).</div>
+          </div>
+        </div>
+        """)
+
+    # Evolução temporal de leads (Diário e Mensal) — card com slicer integrado
     if "DataCadastro" in df_filtrado.columns:
-        st.subheader("Evolução Temporal de Leads")
-        gran = st.radio(
-            "Visualização Série Temporal", 
-            ["Diário", "Mensal"], 
-            horizontal=True, 
-            key="funil_temporal_gran", 
-            label_visibility="collapsed"
+        _df_ev = df_filtrado[["DataCadastro"]].copy()
+        _df_ev["Leads"] = 1
+        grafico_evolucao(
+            _df_ev, "DataCadastro", "Leads", "Evolução de Leads CRM",
+            cor=_VERDE_BASE, key="funil_temporal",
         )
-        
-        d = df_filtrado.copy()
-        d["DataCadastro"] = pd.to_datetime(d["DataCadastro"])
-        
-        if gran == "Mensal":
-            d["periodo"] = d["DataCadastro"].dt.to_period("M").dt.to_timestamp()
-            agg = d.groupby("periodo").size().reset_index(name="Leads")
-            agg = agg.sort_values("periodo")
-            agg["periodo_str"] = agg["periodo"].dt.strftime("%b/%Y")
-            
-            y_max = float(agg["Leads"].max()) if not agg.empty else 1
-            fig_ev = px.bar(
-                agg, x="periodo_str", y="Leads",
-                color_discrete_sequence=[_VERDE_BASE],
-            )
-            fig_ev.update_traces(
-                text=[_br(v) for v in agg["Leads"]],
-                textposition="outside",
-                textfont=dict(color="#ffffff", size=12, family="Manrope, sans-serif"),
-                marker_line_width=0,
-                cliponaxis=False,
-            )
-            fig_ev.update_layout(**{**_LAYOUT_BASE, **dict(
-                height=380,
-                xaxis=dict(title=None, type="category"),
-                yaxis=dict(title=None, gridcolor="#2a2a2a", range=[0, y_max * 1.22]),
-                title=_titulo_layout("Evolução Mensal de Leads CRM"),
-            )})
-        else:
-            d["periodo"] = d["DataCadastro"].dt.normalize()
-            agg = d.groupby("periodo").size().reset_index(name="Leads")
-            agg = agg.sort_values("periodo")
-            
-            fig_ev = px.area(
-                agg, x="periodo", y="Leads",
-                color_discrete_sequence=[_VERDE_BASE],
-            )
-            fig_ev.update_traces(
-                line=dict(width=2, color=_VERDE_BASE),
-                fillcolor=_rgba(_VERDE_BASE, 0.13)
-            )
-            fig_ev.update_layout(**{**_LAYOUT_BASE, **dict(
-                height=380,
-                yaxis=dict(gridcolor="#2a2a2a"),
-                title=_titulo_layout("Evolução Diária de Leads CRM"),
-            )})
-            
-        st.plotly_chart(fig_ev, use_container_width=True)
 
+# ── Aba "Perdas & Desempenho" ─────────────────────────────────────────────────
+with aba_perdas:
     # ── Justificativas de Perda + Leads Parados (lado a lado) ─────────────────
     if "Etapa_NF" in df_filtrado.columns:
         st.write("")
@@ -524,7 +459,6 @@ with aba1:
 
         # Esquerda: motivos de perda
         with col_perda:
-            st.subheader("Justificativas de Perda de Vendas")
             df_perdidos = df_filtrado[df_filtrado["Etapa_NF"] == "Venda Perdida"]
             if not df_perdidos.empty and "Status" in df_filtrado.columns:
                 resumo_perda = df_perdidos["Status"].fillna("Não Informado").astype(str).str.strip()
@@ -535,40 +469,47 @@ with aba1:
                 resumo_perda = pd.DataFrame(columns=["Motivo", "Leads"])
 
             if not resumo_perda.empty:
+                _maxp = float(resumo_perda["Leads"].max()) or 1.0
                 fig_perda = px.bar(
                     resumo_perda,
                     x="Leads", y="Motivo",
                     orientation="h",
-                    color_discrete_sequence=["#e74c3c"],
+                    color_discrete_sequence=["#ef4444"],
                     template=_tema(),
                 )
                 fig_perda.update_layout(**{**_LAYOUT_BASE, **dict(
-                    height=380,
-                    xaxis=dict(title=None, gridcolor="#2a2a2a"),
-                    yaxis=dict(title=None, categoryorder="total ascending"),
-                    title=_titulo_layout("Principais Motivos de Perda (Top 10)"),
+                    height=380, bargap=0.42,
+                    margin=dict(l=20, r=20, t=10, b=20),
+                    xaxis=dict(title=None, gridcolor="#eef1f5", griddash="dot",
+                               zeroline=False, showline=False, ticks="",
+                               range=[0, _maxp * 1.18]),
+                    yaxis=dict(title=None, categoryorder="total ascending", showgrid=False,
+                               ticks="", tickfont=dict(size=12, color="#6b6b74")),
+                    title=dict(text=""),
                 )})
                 fig_perda.update_traces(
+                    marker=dict(cornerradius=6, line_width=0),
                     textposition="outside",
                     texttemplate="%{value:,.0f}",
-                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                    textfont=dict(size=12, color="#232329", family="Roboto Condensed, sans-serif"),
+                    hovertemplate="<b>%{y}</b><br>Leads: <b>%{x:,.0f}</b><extra></extra>",
                     cliponaxis=False,
                 )
-                st.plotly_chart(fig_perda, use_container_width=True)
+                fig_perda.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
+                with st.container(key="dfc_motivos_perda"):
+                    _html('<div class="pub-card-title">Principais Motivos de Perda (Top 10)</div>')
+                    st.plotly_chart(fig_perda, use_container_width=True)
             else:
                 st.info("Sem motivos de perda no período.")
 
         # Direita: leads parados sem movimentação (aging)
         with col_aging:
-            st.subheader(
-                "Leads Parados — sem movimentação",
-                help=(
-                    "Considera apenas leads **ativos** no funil (Aguardando Atendimento, "
-                    "Em Atendimento, Visita Agendada, Negociação). "
-                    "Não inclui Venda Ganha nem Venda Perdida, pois esses já estão "
-                    "encerrados e não fazem mais parte do funil em andamento. "
-                    "Dias parados = hoje − última alteração (DataAlteracao)."
-                ),
+            _AGING_TOOLTIP = (
+                "Considera apenas leads ativos no funil (Aguardando Atendimento, "
+                "Em Atendimento, Visita Agendada, Negociação). "
+                "Não inclui Venda Ganha nem Venda Perdida, pois esses já estão "
+                "encerrados e não fazem mais parte do funil em andamento. "
+                "Dias parados = hoje − última alteração (DataAlteracao)."
             )
             _ATIVOS = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
             if {"DataAlteracao", "Etapa_NF"}.issubset(df_filtrado.columns):
@@ -588,31 +529,48 @@ with aba1:
                         df_ag["Faixa"].value_counts().reindex(_labels).fillna(0).reset_index()
                     )
                     resumo_faixa.columns = ["Faixa", "Leads"]
+                    # Gradiente recente→antigo: verde brand → âmbar → vermelho.
                     CORES_AGING = {
-                        "0–3 dias":    _VERDE_BRILHO,
-                        "4–7 dias":    _VERDE_BASE,
-                        "8–14 dias":   "#b5a017",
-                        "15–30 dias":  "#d4a017",
+                        "0–3 dias":    "#2a9d45",
+                        "4–7 dias":    "#4ab861",
+                        "8–14 dias":   "#7dd190",
+                        "15–30 dias":  "#f59e0b",
                         "30–60 dias":  "#e67e22",
                         "60–90 dias":  "#d35400",
-                        "90–180 dias": "#c0392b",
-                        "180+ dias":   "#e74c3c",
+                        "90–180 dias": "#ef4444",
+                        "180+ dias":   "#b91c1c",
                     }
+                    _maxa = float(resumo_faixa["Leads"].max()) or 1.0
                     fig_ag = px.bar(
                         resumo_faixa, x="Faixa", y="Leads",
                         color="Faixa", color_discrete_map=CORES_AGING, template=_tema(),
                     )
                     fig_ag.update_traces(
+                        marker=dict(cornerradius=6, line_width=0),
                         texttemplate="%{y:,.0f}", textposition="outside", cliponaxis=False,
-                        textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                        textfont=dict(size=12, color="#232329", family="Roboto Condensed, sans-serif"),
+                        hovertemplate="<b>%{x}</b><br>Leads: <b>%{y:,.0f}</b><extra></extra>",
                     )
                     fig_ag.update_layout(**{**_LAYOUT_BASE, **dict(
-                        height=380, showlegend=False,
-                        title=_titulo_layout("Distribuição por Tempo sem Movimentação"),
-                        xaxis=dict(title=None),
-                        yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                        height=380, showlegend=False, bargap=0.45,
+                        title=dict(text=""),
+                        margin=dict(l=20, r=20, t=10, b=20),
+                        xaxis=dict(title=None, showgrid=False, ticks="",
+                                   tickfont=dict(size=12, color="#6b6b74")),
+                        yaxis=dict(title=None, gridcolor="#eef1f5", griddash="dot",
+                                   zeroline=False, showline=False, ticks="",
+                                   range=[0, _maxa * 1.2]),
                     )})
-                    st.plotly_chart(fig_ag, use_container_width=True)
+                    fig_ag.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
+                    _ttl_aging = (
+                        '<div class="pub-card-title" '
+                        'style="display:flex;align-items:center;gap:6px;">'
+                        'Distribuição por Tempo sem Movimentação'
+                        f'<span class="help-dot" data-tip="{_AGING_TOOLTIP}">?</span></div>'
+                    )
+                    with st.container(key="dfc_aging_dist"):
+                        _html(_ttl_aging)
+                        st.plotly_chart(fig_ag, use_container_width=True)
                 else:
                     st.info("Sem dados de movimentação (DataAlteracao) para aging.")
 
@@ -672,37 +630,36 @@ with aba1:
                 grupos_dados[_g] = _calc_metricas_grupo(_df_g)
 
         if grupos_dados:
-            # KPI cards — side by side per group
-            g_cols = st.columns(len(grupos_dados))
-            for _ci, (_grupo, _met) in enumerate(grupos_dados.items()):
-                with g_cols[_ci]:
-                    _label = "SDR — Funil de Atendimento" if _grupo == "SDR" else "Outros Funis (agrupados)"
-                    st.markdown(f"**{_label}**")
-                    _ka, _kb, _kc, _kd = st.columns(4)
-                    _ka.metric("Total Leads",  _br(_met["Total"]),
-                              help="Total de leads que entraram neste funil no período selecionado.")
-                    _kb.metric("Vendas Ganhas", _br(_met["Venda Ganha"]),
-                              help="Leads que chegaram à etapa Venda Ganha.")
-                    _kc.metric("Conv. Total",  f"{_met['Conv. Total (%)']:.1f}%",
-                              help="Taxa de conversão total: Venda Ganha ÷ Total de Leads.")
-                    _kd.metric("Taxa Perda",   f"{_met['Taxa Perda (%)']:.1f}%",
-                              help="% de leads marcados como Venda Perdida sobre o total.")
-                    _ke, _kf, _kg, _kh = st.columns(4)
-                    _ke.metric("Lead→Atend",   f"{_met['Lead→Atend (%)']:.1f}%",
-                              help="% de leads que avançaram para atendimento ativo (saíram de Aguardando Atendimento).")
-                    _kf.metric("Negoc→Ganho",  f"{_met['Negoc→Ganho (%)']:.1f}%",
-                              help="% de leads em Negociação que fecharam como Venda Ganha.")
-                    _kg.metric("Tempo Médio",
-                              _fmt_h(_met.get("Tempo Médio (h)")),
-                              help="Tempo médio (horas) de todos os leads com tempo registrado.")
-                    _kh.metric("Ciclo Fecham.",
-                              _fmt_h(_met.get("Ciclo Fecham. (h)")),
-                              help="Tempo médio (horas) dos leads que chegaram a Venda Ganha.")
-
-            st.write("")
-
             _df_met = pd.DataFrame([{"Grupo": g, **m} for g, m in grupos_dados.items()])
 
+            # Resumo tabular — cores reforçam a legenda dos gráficos:
+            # SDR verde, Outros Funis azul.
+            _display_cols = [
+                "Grupo", "Total", "Venda Ganha", "Venda Perdida",
+                "Conv. Total (%)", "Taxa Perda (%)",
+                "Lead→Atend (%)", "Atend→Visita (%)", "Visita→Negoc (%)", "Negoc→Ganho (%)",
+                "Tempo Médio (h)", "Ciclo Fecham. (h)",
+            ]
+            _COR_GRUPO_TXT = {"SDR": _VERDE_BASE, "Outros Funis": "#5b8dee"}
+
+            def _estilo_linha_grupo(row):
+                cor = _COR_GRUPO_TXT.get(row.name, "#232329")
+                return [f"color: {cor}; font-weight: 600"] * len(row)
+
+            def _fmt_br(v):
+                # BR: ponto milhar, vírgula decimal; inteiros sem casas,
+                # demais com 1 casa (sem zeros sobrando).
+                if v is None or (isinstance(v, float) and pd.isna(v)):
+                    return "—"
+                if float(v).is_integer():
+                    return f"{int(v):,}".replace(",", ".")
+                return f"{v:,.1f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+            _tabela_grupo = (
+                _df_met[_display_cols].set_index("Grupo")
+                .style.apply(_estilo_linha_grupo, axis=1)
+                .format(_fmt_br)
+            )
             _col_vol, _col_tx = st.columns(2)
 
             with _col_vol:
@@ -719,18 +676,19 @@ with aba1:
                 )
                 _fig_vol.update_traces(
                     texttemplate="%{y:,.0f}", textposition="outside", cliponaxis=False,
-                    textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                    textfont=dict(size=11, color="#232329", family="Roboto Condensed, sans-serif"),
                 )
                 _fig_vol.update_layout(**{**_LAYOUT_BASE, **dict(
                     height=320,
                     title=_titulo_layout("Volume por Etapa do Funil"),
                     xaxis=dict(title=None),
-                    yaxis=dict(title=None, gridcolor="#2a2a2a"),
+                    yaxis=dict(title=None, gridcolor="#eef1f5", griddash="dot"),
                     legend=dict(
                         orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                        font=dict(family="Manrope, sans-serif", size=11, color="rgba(255,255,255,0.8)"),
+                        font=dict(family="Roboto Condensed, sans-serif", size=11, color="#6b6b74"),
                     ),
                 )})
+                _fig_vol.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
                 st.plotly_chart(_fig_vol, use_container_width=True)
 
             with _col_tx:
@@ -760,32 +718,23 @@ with aba1:
                     )
                     _fig_dur.update_traces(
                         texttemplate="%{y:.1f}h", textposition="outside", cliponaxis=False,
-                        textfont=dict(size=11, color="#ffffff", family="Manrope, sans-serif"),
+                        textfont=dict(size=11, color="#232329", family="Roboto Condensed, sans-serif"),
                     )
                     _fig_dur.update_layout(**{**_LAYOUT_BASE, **dict(
                         height=320,
                         title=_titulo_layout("Duração Média por Etapa (horas)"),
                         xaxis=dict(title=None),
-                        yaxis=dict(title="Horas", gridcolor="#2a2a2a"),
+                        yaxis=dict(title="Horas", gridcolor="#eef1f5", griddash="dot"),
                         legend=dict(
                             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
-                            font=dict(family="Manrope, sans-serif", size=11, color="rgba(255,255,255,0.8)"),
+                            font=dict(family="Roboto Condensed, sans-serif", size=11, color="#6b6b74"),
                         ),
                     )})
+                    _fig_dur.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
                     st.plotly_chart(_fig_dur, use_container_width=True)
 
-            # Resumo tabular
             st.write("")
-            _display_cols = [
-                "Grupo", "Total", "Venda Ganha", "Venda Perdida",
-                "Conv. Total (%)", "Taxa Perda (%)",
-                "Lead→Atend (%)", "Atend→Visita (%)", "Visita→Negoc (%)", "Negoc→Ganho (%)",
-                "Tempo Médio (h)", "Ciclo Fecham. (h)",
-            ]
-            st.dataframe(
-                _df_met[_display_cols].set_index("Grupo"),
-                use_container_width=True,
-            )
+            dataframe_card(_tabela_grupo, "Resumo por grupo", key="resumo_grupo")
 
 # ── Aba 2: Origem e Campanhas ─────────────────────────────────────────────────
 with aba2:
@@ -806,10 +755,11 @@ with aba2:
         df_mat["UtmSource"] = _resolver_origem(df_mat)
         df_mat = df_mat.dropna(subset=["Etapa_NF"])
         if not df_mat.empty:
-            st.subheader("Matriz origem × etapa")
-            st.dataframe(
+            dataframe_card(
                 pd.crosstab(df_mat["UtmSource"], df_mat["Etapa_NF"]),
-                use_container_width=True,
+                "Matriz origem × etapa",
+                key="matriz_origem_etapa",
+                height=460,
             )
 
 # ── Aba 3: Cidades e Cadastro ─────────────────────────────────────────────────
@@ -844,46 +794,22 @@ with aba3:
     with col_cad:
         resumo_cad = _agrupar(df_filtrado, "FormaCadastro")
         if not resumo_cad.empty:
-            total_cad = resumo_cad["Leads"].sum()
-            CORES_CAD = {
-                "Meta":                 _VERDE_BASE,   # verde
-                "Landing page/Google":  "#ffffff",     # branco
-                "Cadastro manual":      "#888888",     # cinza
-            }
-            _cores_slice = [CORES_CAD.get(c, _VERDE_MEDIO) for c in resumo_cad["FormaCadastro"]]
-            _font_cad    = [_font_color_para_fundo(c) for c in _cores_slice]
-            fig_cad = px.pie(
-                resumo_cad,
-                names="FormaCadastro", values="Leads",
-                hole=0.58,
-                color="FormaCadastro",
-                color_discrete_map=CORES_CAD,
-            )
-            fig_cad.update_traces(
-                textposition="inside",
-                textinfo="percent",
-                insidetextfont=dict(family="JetBrains Mono, monospace", size=11, color=_font_cad),
-                hovertemplate="%{label}: %{value:,.0f} (%{percent})<extra></extra>",
-                domain=dict(x=[0, 0.62], y=[0, 1]),
-            )
-            fig_cad.add_annotation(
-                text=f"<b>{_br(total_cad)}</b><br><span style='font-size:11px;opacity:0.6'>total</span>",
-                x=0.31, y=0.5, xanchor="center", yanchor="middle", showarrow=False,
-                font=dict(family="JetBrains Mono, monospace", size=14, color="#ffffff"),
-                align="center",
-            )
-            fig_cad.update_layout(
-                template=_tema(), height=440,
-                margin=dict(l=10, r=10, t=50, b=10),
-                legend=dict(
-                    orientation="v", x=0.65, y=0.5, xanchor="left", yanchor="middle",
-                    font=dict(family="Manrope, sans-serif", size=12, color="rgba(255,255,255,0.8)"),
-                ),
-                title=_titulo_layout("Leads por forma de cadastro"),
-            )
-            st.plotly_chart(fig_cad, use_container_width=True)
+            grafico_donut(resumo_cad, "FormaCadastro", "Leads", "Leads por forma de cadastro", altura=390)
         else:
             st.info("Sem dados de forma de cadastro.")
+
+        if "Finalidade" in df_filtrado.columns:
+            df_fin = df_filtrado.copy()
+            df_fin["Finalidade"] = df_fin["Finalidade"].fillna("").astype(str).str.strip()
+            df_fin = df_fin[~df_fin["Finalidade"].isin(["", "Não Informado", "não informado"])]
+            resumo_fin = _agrupar(df_fin, "Finalidade")
+            if not resumo_fin.empty:
+                _barras_card(
+                    resumo_fin, "Leads", "Finalidade",
+                    "Finalidade de compra &nbsp;<span style='font-size:11px;font-weight:400;color:#8f8f96'>⚠️ \"Não Informado\" excluído</span>",
+                    "bar_finalidade",
+                )
+                _html('<div style="height:60px"></div>')
 
     with col_orig_cont:
         if "OrigemContato" in df_filtrado.columns:
@@ -892,16 +818,6 @@ with aba3:
             df_origcont = df_origcont[df_origcont["OrigemContato"] != ""]
             resumo_origcont = _agrupar(df_origcont, "OrigemContato")
             _barras_card(resumo_origcont, "Leads", "OrigemContato", "Meio de Contato (Origem Contato)", "bar_origem_contato")
-
-    st.write("")
-    if "Finalidade" in df_filtrado.columns:
-        df_fin = df_filtrado.copy()
-        df_fin["Finalidade"] = (
-            df_fin["Finalidade"].fillna("Não Informado").astype(str)
-            .str.strip().replace({"": "Não Informado"})
-        )
-        resumo_fin = _agrupar(df_fin, "Finalidade")
-        _barras_card(resumo_fin, "Leads", "Finalidade", "Finalidade de compra", "bar_finalidade")
 
 # ── Aba 4: Operação ───────────────────────────────────────────────────────────
 with aba4:
@@ -953,7 +869,6 @@ with aba4:
     t_resp, t_aging = st.columns(2)
 
     with t_resp:
-        st.subheader("Resumo por responsável")
         if {"Responsavel", "Codigo"}.issubset(df_filtrado.columns):
             df_resp2 = df_filtrado.dropna(subset=["Responsavel"])
             df_resp2 = df_resp2[df_resp2["Responsavel"].astype(str).str.strip() != ""]
@@ -970,18 +885,16 @@ with aba4:
                 )
                 if "Tempo Médio (h)" in resumo_resp2.columns:
                     resumo_resp2["Tempo Médio (h)"] = resumo_resp2["Tempo Médio (h)"].round(1)
-                st.dataframe(resumo_resp2, hide_index=True, use_container_width=True, height=_TBL_H)
+                dataframe_card(resumo_resp2, "Resumo por responsável",
+                               key="resumo_resp", height=_TBL_H, hide_index=True)
             else:
                 st.info("Sem dados de responsável para o período.")
 
     with t_aging:
-        st.subheader(
-            "Leads ativos parados há mais de 7 dias",
-            help=(
-                "Leads ativos no funil (Aguardando, Em Atendimento, Visita Agendada, "
-                "Negociação) sem alteração há mais de 7 dias, agrupados por responsável. "
-                "Não inclui Venda Ganha nem Venda Perdida."
-            ),
+        _AGING_HELP = (
+            "Leads ativos no funil (Aguardando, Em Atendimento, Visita Agendada, "
+            "Negociação) sem alteração há mais de 7 dias, agrupados por responsável. "
+            "Não inclui Venda Ganha nem Venda Perdida."
         )
         _ATIVOS_OP = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
         if {"DataAlteracao", "Etapa_NF", "Responsavel", "Codigo"}.issubset(df_filtrado.columns):
@@ -1003,7 +916,9 @@ with aba4:
                 )
                 resumo_crit["Dias_Medio"] = resumo_crit["Dias_Medio"].round(1)
                 resumo_crit.columns = ["Responsável", "Parados >7d", "Dias Médio"]
-                st.dataframe(resumo_crit, hide_index=True, use_container_width=True, height=_TBL_H)
+                dataframe_card(resumo_crit, "Leads ativos parados há mais de 7 dias",
+                               key="aging_parados", height=_TBL_H, help=_AGING_HELP,
+                               hide_index=True)
             else:
                 st.info("Nenhum lead ativo parado há mais de 7 dias.")
 

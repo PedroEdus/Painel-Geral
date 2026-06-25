@@ -4,41 +4,42 @@ import streamlit as st
 # PALETAS DE COR
 # ════════════════════════════════════════════════════════════════════════════
 
+# Paleta alinhada ao design system do Painel do Milhão (verde #2a9d45).
 PALETTE = [
-    "#008347",  # verde principal
-    "#f0f0f0",  # branco
-    "#888888",  # cinza
-    "#006682",  # azul-petróleo
-    "#008274",  # teal-verde
-    "#5BD9CC",  # teal claro
-    "#1E3436",  # teal escuro
+    "#2a9d45",  # brand verde (primária)
+    "#7dd190",  # brand verde claro
+    "#8fa399",  # cinza-verde
+    "#3b82f6",  # azul (info)
+    "#1e7d34",  # brand verde escuro
+    "#4ab861",  # brand verde médio
+    "#1a6229",  # brand verde profundo
 ]
 
-VERDE = "#008140"
+VERDE = "#2a9d45"
 
 # Estoque / Lançamento (Google Ads, Meta, Publya)
 LANCAMENTO_COLOR_MAP = {
-    "Lançamento": "#008140",
-    "Estoque":    "#00b359",
-    "Outros":     "#888888",
+    "Lançamento": "#2a9d45",
+    "Estoque":    "#4ab861",
+    "Outros":     "#8fa399",
 }
 
 # Canais de tráfego (GA4)
 CANAL_COLORS = {
-    "Orgânico":   "#008140",
-    "Pago":       "#004d26",
-    "Direto":     "#888888",
-    "Social":     "#33aa77",
-    "Referência": "#00b359",
-    "Outros":     "#444444",
+    "Orgânico":   "#2a9d45",
+    "Pago":       "#1a6229",
+    "Direto":     "#8fa399",
+    "Social":     "#7dd190",
+    "Referência": "#4ab861",
+    "Outros":     "#4e4e57",
 }
 
 # Tipo de mídia (Publya)
 COLOR_MAP_MIDIA = {
-    "Display": "#008140",
-    "Vídeo":   "#00b359",
-    "Áudio":   "#ffffff",
-    "Misto":   "#aaaaaa",
+    "Display": "#2a9d45",
+    "Vídeo":   "#4ab861",
+    "Áudio":   "#7dd190",
+    "Misto":   "#8fa399",
 }
 
 # Canais Google Ads (advertising_channel_type)
@@ -62,16 +63,16 @@ CHANNEL_COLORS_GADS = {
 
 # Objetivos Meta
 OBJECTIVE_COLOR_MAP = {
-    "OUTCOME_LEADS": "#008140", 
-    "OUTCOME_AWARENESS": "#00b359",
-    "OUTCOME_ENGAGEMENT": "#66cc99", 
-    "OUTCOME_TRAFFIC": "#004d26",
-    "OUTCOME_SALES": "#33aa77", 
-    "OUTCOME_APP_PROMOTION": "#888888",
-    "CONVERSIONS": "#005c2e", 
-    "LINK_CLICKS": "#99ddbb",
-    "REACH": "#00b359", 
-    "VIDEO_VIEWS": "#cceedb",
+    "OUTCOME_LEADS": "#2a9d45",
+    "OUTCOME_AWARENESS": "#4ab861",
+    "OUTCOME_ENGAGEMENT": "#7dd190",
+    "OUTCOME_TRAFFIC": "#1a6229",
+    "OUTCOME_SALES": "#1e7d34",
+    "OUTCOME_APP_PROMOTION": "#8fa399",
+    "CONVERSIONS": "#174f23",
+    "LINK_CLICKS": "#b3e6bc",
+    "REACH": "#4ab861",
+    "VIDEO_VIEWS": "#d8f3de",
 }
 
 OBJECTIVE_LABELS = {

@@ -3,14 +3,14 @@ import streamlit as st
 import plotly.express as px
 
 from core.theme import aplicar_tema
-from core.ui import kpis, botao_download_csv
+from core.ui import cabecalho, kpis, botao_download_csv
 from core.format import _br, VERDE
-from core.charts import _LAYOUT_BASE, _titulo_layout, grafico_donut
+from core.charts import _LAYOUT_BASE, _titulo_layout, grafico_donut, dataframe_card
 from sources.clientes import carregar_clientes, fix_text_values
 
 aplicar_tema()
 
-st.title("Análise de Clientes — Buriti")
+cabecalho("Análise de Clientes — Buriti", "Perfil demográfico da base de clientes")
 
 # ── Carregar Dados ────────────────────────────────────────────────────────────
 with st.spinner("Carregando dados demográficos de clientes..."):
@@ -77,6 +77,10 @@ kpis({
     "Média de Idade": f"{avg_age} anos" if avg_age > 0 else "N/A",
     "Cidades de Obras": f"{num_cities} cidades",
     "Divisão de Gênero": f"{m_percent:.0f}% M / {f_percent:.0f}% F"
+}, ajudas={
+    "Total de Vendas": "Quantidade total de empreendimentos vendidos no período.",
+    "Clientes Únicos": "Número de clientes distintos (sem duplicar quem comprou mais de uma vez).",
+    "Divisão de Gênero": "Percentual de clientes por gênero (M/F) com base no cadastro.",
 })
 st.divider()
 
@@ -105,15 +109,16 @@ with tab_demographics:
             valor='quantidade',
             titulo='Distribuição por Gênero',
             color_map=PALETTE_GENDER,
-            total_centro=True
+            total_centro=True,
+            altura=320,
         )
         
     with col_f:
         df_purpose = df.copy()
         df_purpose['quantidade'] = 1
         PALETTE_PURPOSE = {
-            "INVESTIMENTO": "#008140",       # verde principal
-            "MORADIA": "#006682",            # azul-petróleo
+            "INVESTIMENTO": "#2a9d45",       # verde principal
+            "MORADIA": "#8f8f96",            # azul-petróleo
             "SEGUNDA RESIDÊNCIA": "#008274",  # teal-verde
             "ALUGUEL": "#5BD9CC",            # teal claro
             "Não Informado": "#888888"       # cinza
@@ -125,7 +130,8 @@ with tab_demographics:
             valor='quantidade',
             titulo='Finalidade de Compra dos Clientes',
             color_map=PALETTE_PURPOSE,
-            total_centro=True
+            total_centro=True,
+            altura=320,
         )
         
     st.divider()
@@ -152,13 +158,14 @@ with tab_demographics:
             **{
                 **_LAYOUT_BASE,
                 **dict(
-                    height=340,
+                    height=350,
                     title=_titulo_layout("Distribuição por Faixa Etária"),
-                    xaxis=dict(title="Número de Contratos", gridcolor="#2a2a2a"),
+                    xaxis=dict(title="Número de Contratos", gridcolor="#eef1f5", griddash="dot"),
                     yaxis=dict(title=None)
                 )
             }
         )
+        fig_fe.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
         st.plotly_chart(fig_fe, use_container_width=True)
         
     with col_hist:
@@ -175,101 +182,47 @@ with tab_demographics:
                     **dict(
                         height=350,
                         title=_titulo_layout("Distribuição Detalhada de Idades"),
-                        xaxis=dict(title="Idade do Cliente (anos)", gridcolor="#2a2a2a"),
-                        yaxis=dict(title="Quantidade de Clientes", gridcolor="#2a2a2a")
+                        xaxis=dict(title="Idade do Cliente (anos)", gridcolor="#eef1f5", griddash="dot"),
+                        yaxis=dict(title="Quantidade de Clientes", gridcolor="#eef1f5", griddash="dot")
                     )
                 }
             )
+            fig_hist.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
             st.plotly_chart(fig_hist, use_container_width=True)
         else:
             st.info("Sem dados de idades válidos para exibir no histograma.")
 
     st.divider()
-    col_ec, col_edu = st.columns(2)
-    
+    col_ec, col_prof = st.columns([1, 1.8])
+
     with col_ec:
-        ec_counts = df['estado_civil'].value_counts().reset_index()
-        ec_counts.columns = ['estado_civil', 'vendas']
-        
-        fig_ec = px.bar(
-            ec_counts,
-            x='estado_civil',
-            y='vendas',
-            color_discrete_sequence=[VERDE]
+        ec_df = df[['estado_civil']].copy()
+        _merge = {"Viúvo": "Solteiro", "Separado": "Solteiro"}
+        _keep  = {"Solteiro", "Casado", "Divorciado"}
+        ec_df['estado_civil'] = ec_df['estado_civil'].map(lambda v: _merge.get(v, v))
+        ec_df = ec_df[ec_df['estado_civil'].isin(_keep)]
+        ec_counts = ec_df['estado_civil'].value_counts().reset_index()
+        ec_counts.columns = ['Estado Civil', 'vendas']
+        grafico_donut(ec_counts, "Estado Civil", "vendas", "Estado Civil dos Clientes", altura=440)
+
+    with col_prof:
+        prof_df = df[~df['profissao_cliente'].isna()]
+        prof_df = prof_df[~prof_df['profissao_cliente'].isin(['Não Informado', 'Nao Informada', 'nan', ''])]
+        prof_counts = prof_df['profissao_cliente'].value_counts().reset_index().head(15)
+        prof_counts.columns = ['profissao_cliente', 'vendas']
+        prof_counts['profissao_cliente'] = prof_counts['profissao_cliente'].astype(str).str.title()
+        fig_prof = px.bar(
+            prof_counts, y='profissao_cliente', x='vendas',
+            orientation='h', color_discrete_sequence=[VERDE],
         )
-        fig_ec.update_layout(
-            **{
-                **_LAYOUT_BASE,
-                **dict(
-                    height=350,
-                    title=_titulo_layout("Estado Civil dos Clientes"),
-                    xaxis=dict(title=None),
-                    yaxis=dict(title="Número de Contratos", gridcolor="#2a2a2a")
-                )
-            }
-        )
-        st.plotly_chart(fig_ec, use_container_width=True)
-        
-    with col_edu:
-        exclude_ni_edu = st.checkbox("Excluir 'Não Informado' (Educação)", value=False)
-        edu_df = df.copy()
-        if exclude_ni_edu:
-            edu_df = edu_df[edu_df['grau_instrucao'] != 'Não Informado']
-            
-        edu_counts = edu_df['grau_instrucao'].value_counts().reset_index()
-        edu_counts.columns = ['grau_instrucao', 'vendas']
-        
-        fig_edu = px.bar(
-            edu_counts,
-            y='grau_instrucao',
-            x='vendas',
-            orientation='h',
-            color_discrete_sequence=[VERDE]
-        )
-        fig_edu.update_layout(
-            **{
-                **_LAYOUT_BASE,
-                **dict(
-                    height=400,
-                    title=_titulo_layout("Grau de Instrução"),
-                    xaxis=dict(title="Número de Contratos", gridcolor="#2a2a2a"),
-                    yaxis=dict(title=None)
-                )
-            }
-        )
-        st.plotly_chart(fig_edu, use_container_width=True)
-        
-    st.divider()
-    
-    # Render professions full-width below education and marital status
-    prof_df = df[~df['profissao_cliente'].isna()]
-    prof_df = prof_df[~prof_df['profissao_cliente'].isin(['Não Informado', 'Nao Informada', 'nan', ''])]
-    
-    prof_counts = prof_df['profissao_cliente'].value_counts().reset_index().head(15)
-    prof_counts.columns = ['profissao_cliente', 'vendas']
-    prof_counts['profissao_cliente'] = prof_counts['profissao_cliente'].astype(str).str.title()
-    
-    fig_prof = px.bar(
-        prof_counts,
-        y='profissao_cliente',
-        x='vendas',
-        orientation='h',
-        color='vendas',
-        color_continuous_scale=px.colors.sequential.Greens
-    )
-    fig_prof.update_layout(
-        **{
-            **_LAYOUT_BASE,
-            **dict(
-                height=450,
-                title=_titulo_layout("Top 15 Profissões dos Clientes"),
-                xaxis=dict(title="Número de Contratos", gridcolor="#2a2a2a"),
-                yaxis=dict(title=None),
-                coloraxis_showscale=False
-            )
-        }
-    )
-    st.plotly_chart(fig_prof, use_container_width=True)
+        fig_prof.update_layout(**{**_LAYOUT_BASE, **dict(
+            height=450,
+            title=_titulo_layout("Top 15 Profissões dos Clientes"),
+            xaxis=dict(title="Número de Contratos", gridcolor="#eef1f5", griddash="dot"),
+            yaxis=dict(title=None, categoryorder="total ascending"),
+        )})
+        fig_prof.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
+        st.plotly_chart(fig_prof, use_container_width=True)
 
 # Note: Tab 2 (Evolução de Vendas & Canais) was removed by user request to focus on Demographics and Location.
 
@@ -290,13 +243,13 @@ with tab_location:
     
     with col_rate:
         st.markdown(f"""
-        <div style="padding: 20px; border-radius: 8px; border: 1px solid #2a2a2a; background: #1c1c1c; height: 100%;">
-            <h5 style="margin-top:0; color:rgba(255,255,255,0.6); font-family:'Manrope',sans-serif; font-size:14px; font-weight:600;">Fidelidade Geográfica</h5>
-            <p style="font-size:32px; font-weight:700; color:#008140; margin-bottom: 2px; font-family:'JetBrains Mono',monospace;">{same_rate:.1f}%</p>
-            <p style="font-size:12px; color:rgba(255,255,255,0.7); margin-bottom:15px; font-family:'Manrope',sans-serif; line-height:1.4;">Clientes que residem na <b>mesma</b> cidade do empreendimento (Demanda local).</p>
-            <hr style="border-color:#2a2a2a; margin:15px 0;">
-            <p style="font-size:32px; font-weight:700; color:#006682; margin-bottom: 2px; font-family:'JetBrains Mono',monospace;">{cross_rate:.1f}%</p>
-            <p style="font-size:12px; color:rgba(255,255,255,0.7); font-family:'Manrope',sans-serif; line-height:1.4;">Clientes que residem em cidade <b>diferente</b> da obra (Compradores de fora).</p>
+        <div style="padding: 20px; border-radius: 8px; border: 1px solid #ececed; background: #ffffff; height: 100%;">
+            <h5 style="margin-top:0; color:#6b6b74; font-family:'Segoe UI',sans-serif; font-size:14px; font-weight:600;">Fidelidade Geográfica</h5>
+            <p style="font-size:32px; font-weight:700; color:#2a9d45; margin-bottom: 2px; font-family:'Roboto Condensed',sans-serif;">{same_rate:.1f}%</p>
+            <p style="font-size:12px; color:#6b6b74; margin-bottom:15px; font-family:'Segoe UI',sans-serif; line-height:1.4;">Clientes que residem na <b>mesma</b> cidade do empreendimento (Demanda local).</p>
+            <hr style="border-color:#ececed; margin:15px 0;">
+            <p style="font-size:32px; font-weight:700; color:#8f8f96; margin-bottom: 2px; font-family:'Roboto Condensed',sans-serif;">{cross_rate:.1f}%</p>
+            <p style="font-size:12px; color:#6b6b74; font-family:'Segoe UI',sans-serif; line-height:1.4;">Clientes que residem em cidade <b>diferente</b> da obra (Compradores de fora).</p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -305,14 +258,15 @@ with tab_location:
             "tipo_compra": ["Outras Cidades"] * len(cross_city) + ["Cidade Local"] * len(same_city),
             "quantidade": 1
         })
-        COLOR_MAP_LOC = {"Outras Cidades": "#006682", "Cidade Local": "#008140"}
+        COLOR_MAP_LOC = {"Outras Cidades": "#8f8f96", "Cidade Local": "#2a9d45"}
         grafico_donut(
             loc_df,
             dim='tipo_compra',
             valor='quantidade',
             titulo='Comportamento Geográfico',
             color_map=COLOR_MAP_LOC,
-            total_centro=True
+            total_centro=True,
+            altura=260,
         )
         
     st.divider()
@@ -327,8 +281,7 @@ with tab_location:
             y='cidade',
             x='vendas',
             orientation='h',
-            color='vendas',
-            color_continuous_scale=px.colors.sequential.Greens
+            color_discrete_sequence=["#2a9d45"],
         )
         fig_ccli.update_layout(
             **{
@@ -336,12 +289,12 @@ with tab_location:
                 **dict(
                     height=400,
                     title=_titulo_layout("Top 15 Cidades de Residência dos Clientes"),
-                    xaxis=dict(title="Número de Clientes", gridcolor="#2a2a2a"),
-                    yaxis=dict(title=None),
-                    coloraxis_showscale=False
+                    xaxis=dict(title="Número de Clientes", gridcolor="#eef1f5", griddash="dot"),
+                    yaxis=dict(title=None, categoryorder="total ascending"),
                 )
             }
         )
+        fig_ccli.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
         st.plotly_chart(fig_ccli, use_container_width=True)
         
     with col_cobr:
@@ -353,8 +306,7 @@ with tab_location:
             y='cidade',
             x='vendas',
             orientation='h',
-            color='vendas',
-            color_continuous_scale=px.colors.sequential.Greens
+            color_discrete_sequence=["#2a9d45"],
         )
         fig_cobr.update_layout(
             **{
@@ -362,12 +314,12 @@ with tab_location:
                 **dict(
                     height=400,
                     title=_titulo_layout("Top 15 Cidades de Obras (Empreendimentos)"),
-                    xaxis=dict(title="Número de Empreendimentos Vendidos", gridcolor="#2a2a2a"),
-                    yaxis=dict(title=None),
-                    coloraxis_showscale=False
+                    xaxis=dict(title="Número de Empreendimentos Vendidos", gridcolor="#eef1f5", griddash="dot"),
+                    yaxis=dict(title=None, categoryorder="total ascending"),
                 )
             }
         )
+        fig_cobr.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
         st.plotly_chart(fig_cobr, use_container_width=True)
 
     # Neighborhood analysis section when exactly 1 city is selected
@@ -401,12 +353,13 @@ with tab_location:
                         **dict(
                             height=450,
                             title=_titulo_layout("Top 15 Bairros dos Compradores"),
-                            xaxis=dict(title="Número de Clientes", gridcolor="#2a2a2a"),
+                            xaxis=dict(title="Número de Clientes", gridcolor="#eef1f5", griddash="dot"),
                             yaxis=dict(title=None),
                             coloraxis_showscale=False
                         )
                     }
                 )
+                fig_bairro.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
                 st.plotly_chart(fig_bairro, use_container_width=True)
             else:
                 st.info("Nenhum dado de bairro detalhado disponível para esta seleção.")
@@ -418,15 +371,16 @@ with tab_location:
                 bairro_counts['%'] = bairro_counts['%'].round(1).astype(str) + '%'
                 
                 st.markdown(f"<div style='margin-bottom:10px;'>Total de compradores com bairros informados: <b>{total_bairros_cados:,}</b></div>", unsafe_allow_html=True)
-                st.dataframe(
+                dataframe_card(
                     bairro_counts,
+                    "Bairros de origem",
+                    key="bairros_origem",
                     column_config={
                         "bairro": "Bairro de Origem",
                         "clientes": st.column_config.NumberColumn("Qtd. Clientes", format="%d"),
                         "%": "Representatividade"
                     },
                     hide_index=True,
-                    use_container_width=True
                 )
                 st.caption("ℹ️ Representatividade calculada com base no total de clientes PF com bairro informado para esta cidade.")
             else:

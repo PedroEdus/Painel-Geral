@@ -4,7 +4,7 @@ import plotly.express as px
 from datetime import date
 
 from core.theme import aplicar_tema
-from core.ui import exibir_logo, kpis, botao_download_csv
+from core.ui import cabecalho, exibir_logo, kpis, botao_download_csv
 from core.format import (
     _br, 
     _rgba,
@@ -27,7 +27,7 @@ from sources.google_ads import carregar_google_ads
 
 aplicar_tema()
 
-st.title("Google Ads — Buriti")
+cabecalho("Google Ads — Buriti", "Performance de campanhas Google Ads")
 
 # ── Carregar Dados ────────────────────────────────────────────────────────────
 with st.spinner("Carregando dados do Google Ads..."):
@@ -118,41 +118,56 @@ st.divider()
 
 # ── Helpers Específicos do CPC ────────────────────────────────────────────────
 def exibir_evolucao_cpc(df_cpc):
-    gran = st.radio("Visualização", ["Diário", "Mensal"], horizontal=True, key="cpc_gran", label_visibility="collapsed")
-    d = df_cpc.copy()
-    d["date"] = pd.to_datetime(d["date"])
-    if gran == "Mensal":
-        d["periodo"] = d["date"].dt.to_period("M").dt.to_timestamp()
-    else:
-        d["periodo"] = d["date"].dt.normalize()
-        
-    agg = d.groupby("periodo", as_index=False)[["cost", "clicks"]].sum()
-    agg["cpc"] = agg["cost"] / agg["clicks"].replace(0, float("nan"))
-    agg["cpc"] = agg["cpc"].fillna(0.0)
+    with st.container(key="dfc_evol_cpc"):
+        _html('<div class="pub-card-title">Custo por clique (R$)</div>')
+        gran = st.radio("Visualização", ["Diário", "Mensal"], horizontal=True,
+                        key="cpc_gran", label_visibility="collapsed")
+        d = df_cpc.copy()
+        d["date"] = pd.to_datetime(d["date"])
+        if gran == "Mensal":
+            d["periodo"] = d["date"].dt.to_period("M").dt.to_timestamp()
+        else:
+            d["periodo"] = d["date"].dt.normalize()
 
-    titulo_full = f"Custo por clique (R$) ({'mês' if gran == 'Mensal' else 'dia'})"
+        agg = d.groupby("periodo", as_index=False)[["cost", "clicks"]].sum()
+        agg["cpc"] = agg["cost"] / agg["clicks"].replace(0, float("nan"))
+        agg["cpc"] = agg["cpc"].fillna(0.0)
 
-    if gran == "Mensal":
-        agg["periodo_str"] = agg["periodo"].dt.strftime("%b/%Y")
-        y_max = float(agg["cpc"].max()) or 1
-        fig = px.bar(agg, x="periodo_str", y="cpc")
-        fig.update_traces(
-            marker_color="#33aa77", text=[_br(v, 2, "R$ ") for v in agg["cpc"]],
-            texttemplate="%{text}", textposition="outside",
-            textfont=dict(size=10, color="rgba(255,255,255,0.7)"), cliponaxis=False,
-        )
-        fig.update_layout(**{**_LAYOUT_BASE, **dict(
-            height=400, bargap=0.28,
-            xaxis=dict(title=None, type="category", gridcolor="#2a2a2a"),
-            yaxis=dict(title=None, gridcolor="#2a2a2a", range=[0, y_max * 1.22]),
-            title=_titulo_layout(titulo_full),
-        )})
-    else:
-        fig = px.area(agg, x="periodo", y="cpc", color_discrete_sequence=["#33aa77"])
-        fig.update_traces(line=dict(width=2, color="#33aa77"), fillcolor=_rgba("#33aa77", 0.13))
-        fig.update_layout(**{**_LAYOUT_BASE, **dict(height=380, title=_titulo_layout(titulo_full))})
-        
-    st.plotly_chart(fig, use_container_width=True)
+        _tick = dict(size=12, color="#6b6b74", family="Segoe UI, system-ui, sans-serif")
+        if gran == "Mensal":
+            agg["periodo_str"] = agg["periodo"].dt.strftime("%b/%Y")
+            y_max = float(agg["cpc"].max()) or 1
+            fig = px.bar(agg, x="periodo_str", y="cpc")
+            fig.update_traces(
+                marker_color="#2a9d45", text=[_br(v, 2, "R$ ") for v in agg["cpc"]],
+                texttemplate="%{text}", textposition="outside",
+                textfont=dict(size=11, color="#232329", family="Roboto Condensed, sans-serif"), cliponaxis=False,
+            )
+            fig.update_layout(**{**_LAYOUT_BASE, **dict(
+                height=400, bargap=0.28, title=dict(text=""),
+                paper_bgcolor="#ffffff", plot_bgcolor="#ffffff",
+                xaxis=dict(title=None, type="category", showgrid=False, ticks="", tickfont=_tick),
+                yaxis=dict(title=None, gridcolor="#eef1f5", griddash="dot", zeroline=False,
+                           showline=False, ticks="", tickfont=_tick, range=[0, y_max * 1.22]),
+                margin=dict(l=4, r=4, t=10, b=8),
+            )})
+        else:
+            fig = px.area(agg, x="periodo", y="cpc", color_discrete_sequence=["#2a9d45"])
+            fig.update_traces(
+                line=dict(width=2.5, color="#2a9d45", shape="spline"),
+                fillcolor=_rgba("#2a9d45", 0.13),
+            )
+            fig.update_layout(**{**_LAYOUT_BASE, **dict(
+                height=380, title=dict(text=""),
+                paper_bgcolor="#ffffff", plot_bgcolor="#ffffff",
+                xaxis=dict(title=None, showgrid=False, ticks="", tickfont=_tick),
+                yaxis=dict(title=None, gridcolor="#eef1f5", griddash="dot", zeroline=False,
+                           showline=False, ticks="", tickfont=_tick),
+                margin=dict(l=4, r=4, t=10, b=8),
+            )})
+
+        fig.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
+        st.plotly_chart(fig, use_container_width=True)
 
 def exibir_cpc_agrupado(df_cpc, coluna_grupo, titulo, color_map=None):
     agg = df_cpc.groupby(coluna_grupo, as_index=False).agg(
@@ -266,7 +281,7 @@ with aba_gasto:
                       color_map=CHANNEL_COLORS_GADS, label_func=lambda x: CHANNEL_LABELS_GADS.get(str(x), str(x)))
 
 with aba_cliques:
-    grafico_evolucao(df, "date", "clicks", "Cliques", cor="#00b359", fmt=lambda v: _br(v), key="google_clicks")
+    grafico_evolucao(df, "date", "clicks", "Cliques", cor="#4ab861", fmt=lambda v: _br(v), key="google_clicks")
     c1, c2 = st.columns(2)
     with c1:
         grafico_donut(df, "Tipo_Lancamento", "clicks", "Cliques por tipo", color_map=LANCAMENTO_COLOR_MAP)

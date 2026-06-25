@@ -1,6 +1,14 @@
 [theme]
-base = "dark"
-primaryColor = "#008140"
-backgroundColor = "#0d0d0d"
-secondaryBackgroundColor = "#1c1c1c"
-textColor = "#ffffff"
+base = "light"
+primaryColor = "#2a9d45"
+backgroundColor = "#FFFFFF"
+secondaryBackgroundColor = "#F5F5F6"
+textColor = "#232329"
+font = "\"Segoe UI\", system-ui, -apple-system, Roboto, Arial, sans-serif"
+
+[server]
+headless = true
+enableXsrfProtection = true
+
+[browser]
+gatherUsageStats = false
