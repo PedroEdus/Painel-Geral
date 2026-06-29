@@ -318,6 +318,39 @@ div[role="radiogroup"] div[data-baseweb="radio"] input:checked + div div:first-c
 @keyframes fadeUp {{ from {{ opacity:0; transform:translateY(12px); }} to {{ opacity:1; transform:none; }} }}
 @keyframes fadeIn {{ from {{ opacity:0; transform:translateY(8px); }} to {{ opacity:1; transform:translateY(0); }} }}
 @media (prefers-reduced-motion: reduce) {{ * {{ animation:none !important; }} }}
+
+/* ── Responsivo: celular (≤640px) ──────────────────────────────
+   Empilha colunas, reduz paddings/fontes, aperta linhas de barra
+   e cabeçalho. Tabelas/matriz mantêm scroll horizontal próprio. */
+@media (max-width: 640px) {{
+  /* colunas lado a lado passam a empilhar (gráficos, KPIs, tabelas) */
+  [data-testid="stHorizontalBlock"] {{ flex-direction: column !important; }}
+  [data-testid="stColumn"] {{ width: 100% !important; flex: 1 1 100% !important; min-width: 0 !important; }}
+
+  /* margens da página menores */
+  .block-container, [data-testid="stMainBlockContainer"] {{
+    padding-left: 8px !important; padding-right: 8px !important; }}
+
+  /* KPI tiles menores */
+  div[data-testid="stMetric"] {{ padding: 12px 14px !important; min-height: 76px !important; }}
+  div[data-testid="stMetricValue"], div[data-testid="stMetricValue"] > div {{ font-size: 20px !important; }}
+
+  /* cards e gráficos com padding menor */
+  .pub-card {{ padding: 14px 14px 10px !important; }}
+  [data-testid="stElementContainer"]:has([data-testid="stPlotlyChart"]) {{ padding: 12px 10px 8px !important; }}
+
+  /* linhas de barra: encolhe nome/valor p/ caber a barra */
+  .pub-bar-row {{ grid-template-columns: minmax(0,110px) 1fr 56px !important; gap: 8px !important; }}
+
+  /* tabs roláveis na horizontal em vez de quebrar */
+  .stTabs [data-baseweb="tab-list"] {{ overflow-x: auto !important; flex-wrap: nowrap !important; }}
+  .stTabs [data-baseweb="tab"] {{ padding: 8px 10px !important; font-size: 13px !important; white-space: nowrap; }}
+
+  /* cabeçalho com logo: empilha e diminui */
+  .ph {{ flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 16px; }}
+  .ph-title {{ font-size: 18px; }}
+  h1 {{ font-size: 21px !important; }}
+}}
 </style>
 """
 

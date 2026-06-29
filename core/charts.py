@@ -16,6 +16,10 @@ from core.format import (
 
 POR_PAGINA = 20
 
+# Gráficos sem interação: sem barra de ferramentas, sem zoom/pan/scroll.
+# staticPlot=True remove toda interação (melhora também o scroll/pinch no mobile).
+PLOTLY_CONFIG = {"displayModeBar": False, "staticPlot": True}
+
 # Fontes e superfícies do design system do Painel do Milhão (modo claro).
 _FONT = '"Segoe UI", system-ui, -apple-system, Roboto, Arial, sans-serif'
 _FONT_NUM = '"Roboto Condensed", "Bahnschrift", "Arial Narrow", sans-serif'
@@ -216,7 +220,7 @@ def grafico_evolucao(df: pd.DataFrame, date_col: str, value_col: str, titulo: st
                 yaxis=dict(title=None, gridcolor=_GRID, griddash="dot"),
             )})
 
-        st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 
 def grafico_barras_mensais(df: pd.DataFrame, x: str, y: str, titulo: str,
@@ -301,7 +305,7 @@ def grafico_barras_mensais(df: pd.DataFrame, x: str, y: str, titulo: str,
     if not titulo:
         fig.update_layout(margin=dict(l=20, r=20, t=10, b=20))
 
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 
 def grafico_barras_h_card(df: pd.DataFrame, x_col: str, y_col: str, titulo: str,
@@ -400,7 +404,7 @@ def grafico_donut(df: pd.DataFrame, dim: str, valor: str, titulo: str,
         title=_titulo_layout(titulo),
         paper_bgcolor="#ffffff", plot_bgcolor="#ffffff",
     )
-    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+    st.plotly_chart(fig, use_container_width=True, config=PLOTLY_CONFIG)
 
 
 def grafico_barras_campanha(df: pd.DataFrame, coluna: str, titulo: str, key: str,

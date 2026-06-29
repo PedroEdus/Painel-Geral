@@ -6,7 +6,7 @@ from datetime import date
 from core.theme import aplicar_tema
 from core.ui import cabecalho, exibir_logo, kpis as render_kpis, botao_download_csv
 from core.format import _br, _font_color_para_fundo, _rgba, VERDE
-from core.charts import _LAYOUT_BASE, _titulo_layout, _tema, _html, dataframe_card, tabela_matriz_html, trapezio_svg, grafico_donut, grafico_evolucao
+from core.charts import _LAYOUT_BASE, _titulo_layout, _tema, _html, dataframe_card, tabela_matriz_html, trapezio_svg, grafico_donut, grafico_evolucao, PLOTLY_CONFIG
 from sources.funil import carregar_leads
 
 # Apply unified design system and styles
@@ -498,7 +498,7 @@ with aba_perdas:
                 fig_perda.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
                 with st.container(key="dfc_motivos_perda"):
                     _html('<div class="pub-card-title">Principais Motivos de Perda (Top 10)</div>')
-                    st.plotly_chart(fig_perda, use_container_width=True)
+                    st.plotly_chart(fig_perda, use_container_width=True, config=PLOTLY_CONFIG)
             else:
                 st.info("Sem motivos de perda no período.")
 
@@ -570,7 +570,7 @@ with aba_perdas:
                     )
                     with st.container(key="dfc_aging_dist"):
                         _html(_ttl_aging)
-                        st.plotly_chart(fig_ag, use_container_width=True)
+                        st.plotly_chart(fig_ag, use_container_width=True, config=PLOTLY_CONFIG)
                 else:
                     st.info("Sem dados de movimentação (DataAlteracao) para aging.")
 
@@ -689,7 +689,7 @@ with aba_perdas:
                     ),
                 )})
                 _fig_vol.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
-                st.plotly_chart(_fig_vol, use_container_width=True)
+                st.plotly_chart(_fig_vol, use_container_width=True, config=PLOTLY_CONFIG)
 
             with _col_tx:
                 _etapas_dur = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação", "Venda Ganha"]
@@ -731,7 +731,7 @@ with aba_perdas:
                         ),
                     )})
                     _fig_dur.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
-                    st.plotly_chart(_fig_dur, use_container_width=True)
+                    st.plotly_chart(_fig_dur, use_container_width=True, config=PLOTLY_CONFIG)
 
             st.write("")
             dataframe_card(_tabela_grupo, "Resumo por grupo", key="resumo_grupo")
