@@ -38,13 +38,15 @@ if "DataCadastro" in df.columns:
             max_value=data_max.date(),
         )
         if isinstance(periodo, list) or isinstance(periodo, tuple):
+            # Compara por DATA (dia inteiro), igual à Visão Geral — senão o
+            # filtro <= meia-noite do último dia corta os leads cadastrados
+            # mais tarde no dia (divergia da Visão Geral).
             if len(periodo) == 2:
-                df = df[
-                    (df["DataCadastro"] >= pd.to_datetime(periodo[0])) &
-                    (df["DataCadastro"] <= pd.to_datetime(periodo[1]))
-                ]
+                _ini, _fim = pd.to_datetime(periodo[0]).date(), pd.to_datetime(periodo[1]).date()
+                df = df[(df["DataCadastro"].dt.date >= _ini) & (df["DataCadastro"].dt.date <= _fim)]
             elif len(periodo) == 1:
-                df = df[df["DataCadastro"] == pd.to_datetime(periodo[0])]
+                _dia = pd.to_datetime(periodo[0]).date()
+                df = df[df["DataCadastro"].dt.date == _dia]
 
 # List of filters we want to apply
 FILTROS = [
