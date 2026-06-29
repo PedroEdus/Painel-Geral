@@ -337,12 +337,12 @@ with aba1:
                   {trapezio_svg(ml, ml_n, cor, h=83)}
                   <div style="position:absolute;inset:0;display:flex;align-items:center;
                     justify-content:center;flex-direction:column;gap:3px;pointer-events:none;">
-                    <span style="font-size:22px;font-weight:800;color:#fff;
+                    <span class="fn-num" style="font-size:22px;font-weight:800;color:#fff;
                       font-family:'Roboto Condensed',sans-serif;">{_br(count)}</span>
                     <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.82);
                       text-transform:uppercase;letter-spacing:1.2px;">{etapa}</span>
                   </div>
-                  <div style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
+                  <div class="fn-pct" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
                     color:#6b6b74;font-size:12px;font-weight:700;
                     font-family:'Roboto Condensed',sans-serif;">{pct:.1f}%</div>
                 </div>"""
@@ -363,7 +363,7 @@ with aba1:
             if perdidas:
                 pct_p = perdidas / total_base * 100 if total_base else 0
                 perdidas_html = f"""
-                <div style="position:absolute;bottom:22px;left:22px;
+                <div class="fn-loss" style="position:absolute;bottom:22px;left:22px;
                   display:flex;flex-direction:column;align-items:flex-start;gap:2px;
                   padding:10px 14px;border-radius:6px;
                   background:rgba(231,76,60,0.10);border:1px solid rgba(231,76,60,0.22);">
@@ -377,14 +377,14 @@ with aba1:
 
             _html(f"""
             <div class="pub-card" style="padding:22px 22px 18px;position:relative;">
-              {perdidas_html}
               <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;
                 color:#8f8f96;margin-bottom:4px;">Base Total</div>
               <div style="font-size:34px;font-weight:800;color:#232329;
                 font-family:'Roboto Condensed',sans-serif;margin-bottom:20px;">{_br(total_base)}</div>
-              <div style="padding-right:52px;">
+              <div class="fn-stages" style="padding-right:52px;">
                 {stages_html}
               </div>
+              {perdidas_html}
             </div>
             """)
         else:

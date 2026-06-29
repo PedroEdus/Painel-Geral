@@ -350,6 +350,18 @@ div[role="radiogroup"] div[data-baseweb="radio"] input:checked + div div:first-c
   .ph {{ flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 16px; }}
   .ph-title {{ font-size: 18px; }}
   h1 {{ font-size: 21px !important; }}
+
+  /* ── Funis HTML (trapézio): caber em tela estreita ──
+     inline styles vencem por especificidade → !important. */
+  .fn-journey {{ flex-direction: column !important; }}        /* funil + cards empilham */
+  .fn-stages {{ padding-right: 28px !important; }}            /* menos gutter p/ o % */
+  .fn-num {{ font-size: 15px !important; }}                   /* número não estoura o trapézio */
+  .fn-pct {{ font-size: 10px !important; right: 2px !important; }}
+  .fn-tip {{ left: 1px !important; width: 14px !important; height: 14px !important; font-size: 9px !important; }}
+  .fn-tip .fn-tipbox {{ left: 18px !important; width: 170px !important; }}
+  /* "Venda Perdida" sai do absoluto e flui abaixo do funil (sem sobrepor) */
+  .fn-loss {{ position: static !important; bottom: auto !important; left: auto !important;
+    margin-top: 12px !important; display: inline-flex !important; }}
 }}
 </style>
 """

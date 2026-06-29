@@ -279,12 +279,12 @@ if _etapas:
           {trapezio_svg(ml, ml_n, cor, h=74)}
           <div style="position:absolute;inset:0;display:flex;align-items:center;
             justify-content:center;flex-direction:column;gap:2px;pointer-events:none;">
-            <span style="font-size:22px;font-weight:800;color:#fff;
+            <span class="fn-num" style="font-size:22px;font-weight:800;color:#fff;
               font-family:'Roboto Condensed',sans-serif;">{_br(count)}</span>
             <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.82);
               text-transform:uppercase;letter-spacing:1.1px;">{etapa}</span>
           </div>
-          <div style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
+          <div class="fn-pct" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
             color:#6b6b74;font-size:12px;font-weight:700;
             font-family:'Roboto Condensed',sans-serif;">{pct:.1f}%</div>
         </div>"""
@@ -334,16 +334,16 @@ if _etapas:
       transition:opacity .15s;z-index:9999;}}
     .fn-tip:hover .fn-tipbox{{visibility:visible;opacity:1;}}
     </style>
-    <div style="display:flex;gap:16px;align-items:stretch;">
+    <div class="fn-journey" style="display:flex;gap:16px;align-items:stretch;">
       <div class="pub-card" style="flex:3;padding:22px 22px 18px;position:relative;margin-bottom:0;">
         <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;
           color:#8f8f96;margin-bottom:4px;">Da mídia à venda</div>
         <div style="font-size:13px;color:#6b6b74;margin-bottom:18px;">
           Impressões: <b style="color:#232329">{_br(total_imp)}</b> · CTR: <b style="color:#232329">{_br(ctr_sel, 2)}%</b>
         </div>
-        <div style="padding-right:52px;">{stages_html}</div>
+        <div class="fn-stages" style="padding-right:52px;">{stages_html}</div>
       </div>
-      <div style="flex:1;display:flex;flex-direction:column;gap:10px;">{_cards_html}</div>
+      <div class="fn-jcards" style="flex:1;display:flex;flex-direction:column;gap:10px;">{_cards_html}</div>
     </div>
     """)
 else:
