@@ -2,6 +2,8 @@ streamlit>=1.36
 pandas
 google-cloud-bigquery
 db-dtypes
+pyarrow
 plotly
 python-dotenv
+requests
 unidecode

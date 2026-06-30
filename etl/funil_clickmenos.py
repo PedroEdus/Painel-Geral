@@ -4,9 +4,9 @@ buriti_marketing_silver.funil_leads no BigQuery.
 """
 import json
 import os
+import sys
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta, date
 
 import re
 import numpy as np
@@ -29,9 +29,9 @@ DATASET    = os.getenv("BQ_DATASET",    "buriti_marketing_silver")
 TABELA     = os.getenv("BQ_TABELA",     "funil_leads")
 BQ_KEY     = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-PAGE_SIZE   = 50
-MAX_WORKERS = 15
-BATCH_PAGES = 30
+PAGE_SIZE     = 50
+MAX_RETRIES   = 4      # tentativas por página antes de abortar
+RETRY_BACKOFF = 3      # segundos × tentativa (3, 6, 9…)
 # ────────────────────────────────────────────────────────────────
 
 
@@ -134,66 +134,54 @@ def _extrair_lista(data) -> list:
     return []
 
 
-def buscar_pagina(page: int, headers: dict) -> dict:
-    try:
-        resp = requests.get(
-            f"{BASE_URL}/lead",
-            headers=headers,
-            params={"query.page": page, "query.pageSize": PAGE_SIZE},
-            timeout=120,
-        )
-        if resp.status_code != 200:
-            return {"page": page, "ok": False, "status": resp.status_code,
-                    "leads": [], "erro": resp.text[:2000]}
-        leads = _extrair_lista(resp.json())
-        return {"page": page, "ok": True, "status": 200, "leads": leads, "qtd": len(leads)}
-    except Exception as exc:
-        return {"page": page, "ok": False, "status": None, "leads": [], "erro": str(exc)}
+def buscar_pagina(page: int, headers: dict, extra_params: dict | None = None) -> dict:
+    """Busca uma página com retry + backoff. Volume pequeno → sequencial, sem workers."""
+    params = {"query.page": page, "query.pageSize": PAGE_SIZE}
+    if extra_params:
+        params.update(extra_params)  # ex.: query.dataModificacaoInicio/Fim
+
+    ultimo_erro = None
+    for tentativa in range(1, MAX_RETRIES + 1):
+        try:
+            resp = requests.get(f"{BASE_URL}/lead", headers=headers, params=params, timeout=120)
+            if resp.status_code == 200:
+                leads = _extrair_lista(resp.json())
+                return {"page": page, "ok": True, "status": 200, "leads": leads, "qtd": len(leads)}
+            ultimo_erro = f"status={resp.status_code} {resp.text[:300]}"
+        except Exception as exc:
+            ultimo_erro = str(exc)
+
+        if tentativa < MAX_RETRIES:
+            espera = RETRY_BACKOFF * tentativa
+            print(f"  Página {page} | tentativa {tentativa} falhou ({ultimo_erro[:120]}) | retry em {espera}s")
+            time.sleep(espera)
+
+    return {"page": page, "ok": False, "status": None, "leads": [], "erro": ultimo_erro}
 
 
-def processar_lote(paginas, headers: dict) -> list:
-    resultados = []
-    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-        futures = {executor.submit(buscar_pagina, p, headers): p for p in paginas}
-        for future in as_completed(futures):
-            res = future.result()
-            resultados.append(res)
-            if res["ok"]:
-                print(f"  Página {res['page']} | OK | {res['qtd']} registros")
-            else:
-                print(f"  Página {res['page']} | ERRO | status={res['status']} | {res.get('erro','')[:120]}")
-    return sorted(resultados, key=lambda x: x["page"])
-
-
-def extrair_todos() -> tuple[list, list]:
+def extrair_todos(extra_params: dict | None = None) -> tuple[list, list]:
+    """Pagina sequencialmente até a última página (página < PAGE_SIZE).
+    Falha de página esgota retries → aborta sem mascarar (evita gap silencioso)."""
     headers     = login()
     todos_leads = []
     erros       = []
     pagina      = 1
 
     while True:
-        paginas = range(pagina, pagina + BATCH_PAGES)
-        print(f"\nPáginas {pagina}–{pagina + BATCH_PAGES - 1}")
-
-        resultados = processar_lote(paginas, headers)
-        parar = False
-
-        for res in resultados:
-            if res["ok"]:
-                todos_leads.extend(res["leads"])
-                if len(res["leads"]) < PAGE_SIZE:
-                    parar = True
-            else:
-                erros.append({"page": res["page"], "status": res["status"], "erro": res.get("erro")})
-
-        print(f"Acumulado: {len(todos_leads)} leads | Erros: {len(erros)}")
-
-        if parar:
-            print("Última página detectada.")
+        res = buscar_pagina(pagina, headers, extra_params)
+        if not res["ok"]:
+            erros.append({"page": pagina, "status": res["status"], "erro": res.get("erro")})
+            print(f"Página {pagina} | ERRO definitivo | {str(res.get('erro',''))[:160]}")
             break
 
-        pagina += BATCH_PAGES
-        time.sleep(1)
+        leads = res["leads"]
+        todos_leads.extend(leads)
+        print(f"Página {pagina} | OK | {len(leads)} registros | acumulado {len(todos_leads)}")
+
+        if len(leads) < PAGE_SIZE:
+            print("Última página detectada.")
+            break
+        pagina += 1
 
     return todos_leads, erros
 
@@ -275,21 +263,151 @@ def write_truncate_bq(df: pd.DataFrame) -> None:
     print(f"Carga concluída. Tabela: {table_ref}")
 
 
+def get_watermark(client: bigquery.Client) -> str | None:
+    """Maior DataAlteracao já carregada (ISO 8601 ordena lexicograficamente).
+    Lido ANTES da extração → se uma run falhou, a próxima recupera o gap."""
+    table_ref = f"{PROJECT_ID}.{DATASET}.{TABELA}"
+    try:
+        rows = list(client.query(f"SELECT MAX(DataAlteracao) AS m FROM `{table_ref}`").result())
+    except Exception as exc:
+        print(f"Sem watermark ({str(exc)[:120]}). Usando fallback.")
+        return None
+    m = rows[0].m if rows else None
+    return str(m) if m is not None else None
+
+
+def dedup_recente(df: pd.DataFrame) -> pd.DataFrame:
+    """Remove duplicatas por Codigo, mantendo a DataAlteracao mais recente.
+    Obrigatório antes do MERGE (BigQuery exige ≤1 linha-fonte por chave)."""
+    if df.empty or "Codigo" not in df.columns:
+        return df
+    if "DataAlteracao" in df.columns:
+        df = df.sort_values("DataAlteracao")  # ISO asc → a mais nova fica por último
+    antes = len(df)
+    df = df.drop_duplicates("Codigo", keep="last").reset_index(drop=True)
+    if antes != len(df):
+        print(f"Dedup: {antes} -> {len(df)} linhas (Codigo unico, alteracao mais recente)")
+    return df
+
+
+def _merge_sql(df: pd.DataFrame, staging: str, target: str) -> str:
+    """MERGE (upsert) por Codigo. Só atualiza se a fonte for mais recente
+    (mantém a cópia com DataAlteracao mais nova mesmo em reprocessamento)."""
+    cols = list(df.columns)
+    if "Codigo" not in cols:
+        raise ValueError("Coluna 'Codigo' ausente — necessária como chave do MERGE.")
+    set_clause = ", ".join(f"T.`{c}` = S.`{c}`" for c in cols if c != "Codigo")
+    ins_cols   = ", ".join(f"`{c}`" for c in cols)
+    ins_vals   = ", ".join(f"S.`{c}`" for c in cols)
+    guard = ""
+    if "DataAlteracao" in cols:
+        guard = " AND (T.DataAlteracao IS NULL OR S.DataAlteracao > T.DataAlteracao)"
+    return (
+        f"MERGE `{target}` T USING `{staging}` S ON T.Codigo = S.Codigo\n"
+        f"WHEN MATCHED{guard} THEN UPDATE SET {set_clause}\n"
+        f"WHEN NOT MATCHED THEN INSERT ({ins_cols}) VALUES ({ins_vals})"
+    )
+
+
+def upsert_bq(df: pd.DataFrame) -> None:
+    """Carga incremental: stage do delta + MERGE por Codigo na tabela final.
+    # ponytail: staging autodetect; se uma coluna do delta vier 100% nula o
+    # tipo pode divergir do target e o MERGE falha. Se acontecer, fixar schema
+    # explícito no LoadJobConfig em vez de autodetect."""
+    df = dedup_recente(df)  # garante ≤1 linha-fonte por Codigo (exigência do MERGE)
+    client  = get_bq_client()
+    target  = f"{PROJECT_ID}.{DATASET}.{TABELA}"
+    staging = f"{PROJECT_ID}.{DATASET}.{TABELA}_staging"
+
+    job_config = bigquery.LoadJobConfig(
+        write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        autodetect=True,
+    )
+    print(f"\nStaging {len(df)} linhas em {staging}…")
+    client.load_table_from_dataframe(df, staging, job_config=job_config).result()
+
+    sql = _merge_sql(df, staging, target)
+    print(f"MERGE em {target}…")
+    job = client.query(sql)
+    job.result()
+    print(f"Upsert concluído. Linhas afetadas: {job.num_dml_affected_rows}")
+
+
+def _tratar_erros(erros: list) -> None:
+    """Em erro de extração: salva detalhe e ABORTA sem gravar.
+    Watermark fica intacto → a próxima run recupera o período (cobre falhas)."""
+    if not erros:
+        return
+    with open("erros_clickmenos.json", "w", encoding="utf-8") as f:
+        json.dump(erros, f, ensure_ascii=False, indent=2)
+    print(f"{len(erros)} erro(s) salvos em erros_clickmenos.json. "
+          f"Abortando sem gravar (watermark preservado).")
+    sys.exit(1)
+
+
 def main():
+    import argparse
+    ap = argparse.ArgumentParser(description="ETL leads ClickMenos → BigQuery")
+    ap.add_argument("--full", action="store_true",
+                    help="Recarga completa (WRITE_TRUNCATE) — ignora watermark")
+    ap.add_argument("--since",
+                    help="Override do dataModificacaoInicio (ISO). Default = MAX(DataAlteracao) do BQ")
+    ap.add_argument("--until", help="dataModificacaoFim (ISO)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="Extrai e mostra params/SQL, mas não grava no BQ")
+    args = ap.parse_args()
+
     print("=== ETL funil_clickmenos ===")
-    leads, erros = extrair_todos()
 
-    if erros:
-        with open("erros_clickmenos.json", "w", encoding="utf-8") as f:
-            json.dump(erros, f, ensure_ascii=False, indent=2)
-        print(f"{len(erros)} erros salvos em erros_clickmenos.json")
-
-    if not leads:
-        print("Nenhum lead extraído. Abortando carga no BQ.")
+    # ── Modo FULL: recarga completa ──────────────────────────────
+    if args.full:
+        print("Modo FULL — recarga completa (WRITE_TRUNCATE).")
+        leads, erros = extrair_todos(None)
+        _tratar_erros(erros)
+        if not leads:
+            print("Nenhum lead extraído. Abortando.")
+            return
+        df = preparar_df(leads)
+        if args.dry_run:
+            print(f"[dry-run] {len(df)} leads (full) — sem gravação.")
+            return
+        write_truncate_bq(df)
+        print("\nETL finalizado.")
         return
 
-    df = preparar_df(leads)
-    write_truncate_bq(df)
+    # ── Modo INCREMENTAL (default): watermark = MAX(DataAlteracao) ─
+    if args.since:
+        since = args.since
+        print(f"Incremental — since (manual): {since}")
+    else:
+        since = get_watermark(get_bq_client())
+        if since is None:
+            since = (date.today() - timedelta(days=1)).isoformat()
+            print(f"Incremental — sem watermark; fallback ontem: {since}")
+        else:
+            print(f"Incremental — watermark MAX(DataAlteracao): {since}")
+
+    extra = {"query.dataModificacaoInicio": since}
+    if args.until:
+        extra["query.dataModificacaoFim"] = args.until
+
+    leads, erros = extrair_todos(extra)
+    _tratar_erros(erros)
+
+    if not leads:
+        print("Nenhum lead novo/alterado no período. Nada a gravar.")
+        return
+
+    df = dedup_recente(preparar_df(leads))
+
+    if args.dry_run:
+        print(f"[dry-run] {len(df)} leads (pós-dedup) — sem gravação.")
+        staging = f"{PROJECT_ID}.{DATASET}.{TABELA}_staging"
+        target  = f"{PROJECT_ID}.{DATASET}.{TABELA}"
+        print("\n" + _merge_sql(df, staging, target))
+        return
+
+    upsert_bq(df)
     print("\nETL finalizado.")
 
 
