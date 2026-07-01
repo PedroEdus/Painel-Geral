@@ -309,8 +309,13 @@ def grafico_barras_mensais(df: pd.DataFrame, x: str, y: str, titulo: str,
 
 
 def grafico_barras_h_card(df: pd.DataFrame, x_col: str, y_col: str, titulo: str,
-                          top_n: int = 15, color: str = VERDE, fmt=None) -> None:
-    """Gráfico de barras horizontais embutido em um HTML Card."""
+                          top_n: int = 15, color: str = VERDE, fmt=None,
+                          altura: int | None = None) -> None:
+    """Gráfico de barras horizontais embutido em um HTML Card.
+
+    `altura` (px) limita a altura da lista de barras (com scroll), útil p/
+    alinhar a altura do card com a de um gráfico Plotly vizinho na mesma linha.
+    """
     fmt = fmt or (lambda v: _br(v))
     if df.empty:
         _html(f'<div class="pub-card"><div class="pub-card-title">{titulo}</div><div style="color:#888">Sem dados.</div></div>')
@@ -327,7 +332,8 @@ def grafico_barras_h_card(df: pd.DataFrame, x_col: str, y_col: str, titulo: str,
             f'<div class="pub-bar-track"><div class="pub-bar-fill" style="width:{bar_w:.2f}%;background:{color};"></div></div>'
             f'<div class="pub-bar-value">{fmt(val)}</div></div>'
         )
-    _html(f'<div class="pub-card"><div class="pub-card-title">{titulo}</div><div class="pub-bar-list">{rows_html}</div></div>')
+    list_style = f' style="max-height:{altura}px;overflow-y:auto;padding-right:4px;"' if altura else ""
+    _html(f'<div class="pub-card"><div class="pub-card-title">{titulo}</div><div class="pub-bar-list"{list_style}>{rows_html}</div></div>')
 
 
 def grafico_donut(df: pd.DataFrame, dim: str, valor: str, titulo: str,

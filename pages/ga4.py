@@ -206,7 +206,7 @@ with aba_ov:
                 ov.groupby("property_name", as_index=False)["sessions"].sum()
                 .assign(nome=lambda d: d["property_name"].map(_nome_curto))
             )
-            grafico_barras_h_card(top_emp, "sessions", "nome", "Top Empreendimentos — Sessões")
+            grafico_barras_h_card(top_emp, "sessions", "nome", "Top Empreendimentos — Sessões", altura=326)
 
         st.divider()
         col3, col4 = st.columns(2)

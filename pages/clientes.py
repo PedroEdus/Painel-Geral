@@ -239,36 +239,37 @@ with tab_location:
     cross_rate = (len(cross_city) / len(loc_clean)) * 100 if len(loc_clean) > 0 else 0
     same_rate = 100 - cross_rate
     
-    col_rate, col_chart = st.columns([1, 2])
-    
-    with col_rate:
-        st.markdown(f"""
-        <div style="padding: 20px; border-radius: 8px; border: 1px solid #ececed; background: #ffffff; height: 100%;">
-            <h5 style="margin-top:0; color:#6b6b74; font-family:'Segoe UI',sans-serif; font-size:14px; font-weight:600;">Fidelidade Geográfica</h5>
-            <p style="font-size:32px; font-weight:700; color:#2a9d45; margin-bottom: 2px; font-family:'Roboto Condensed',sans-serif;">{same_rate:.1f}%</p>
-            <p style="font-size:12px; color:#6b6b74; margin-bottom:15px; font-family:'Segoe UI',sans-serif; line-height:1.4;">Clientes que residem na <b>mesma</b> cidade do empreendimento (Demanda local).</p>
-            <hr style="border-color:#ececed; margin:15px 0;">
-            <p style="font-size:32px; font-weight:700; color:#8f8f96; margin-bottom: 2px; font-family:'Roboto Condensed',sans-serif;">{cross_rate:.1f}%</p>
-            <p style="font-size:12px; color:#6b6b74; font-family:'Segoe UI',sans-serif; line-height:1.4;">Clientes que residem em cidade <b>diferente</b> da obra (Compradores de fora).</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-    with col_chart:
-        loc_df = pd.DataFrame({
-            "tipo_compra": ["Outras Cidades"] * len(cross_city) + ["Cidade Local"] * len(same_city),
-            "quantidade": 1
-        })
-        COLOR_MAP_LOC = {"Outras Cidades": "#8f8f96", "Cidade Local": "#2a9d45"}
-        grafico_donut(
-            loc_df,
-            dim='tipo_compra',
-            valor='quantidade',
-            titulo='Comportamento Geográfico',
-            color_map=COLOR_MAP_LOC,
-            total_centro=True,
-            altura=260,
-        )
-        
+    with st.container(key="dfc_loc_geo"):
+        col_rate, col_chart = st.columns([1, 2])
+
+        with col_rate:
+            st.markdown(f"""
+            <div style="padding-top: 4px;">
+                <h5 style="margin-top:0; margin-bottom:16px; color:#232329; font-family:'Segoe UI',sans-serif; font-size:15px; font-weight:700;">Fidelidade Geográfica</h5>
+                <p style="font-size:32px; font-weight:700; color:#2a9d45; margin-bottom: 2px; font-family:'Roboto Condensed',sans-serif;">{same_rate:.1f}%</p>
+                <p style="font-size:12px; color:#6b6b74; margin-bottom:15px; font-family:'Segoe UI',sans-serif; line-height:1.4;">Clientes que residem na <b>mesma</b> cidade do empreendimento (Demanda local).</p>
+                <hr style="border-color:#ececed; margin:15px 0;">
+                <p style="font-size:32px; font-weight:700; color:#8f8f96; margin-bottom: 2px; font-family:'Roboto Condensed',sans-serif;">{cross_rate:.1f}%</p>
+                <p style="font-size:12px; color:#6b6b74; font-family:'Segoe UI',sans-serif; line-height:1.4;">Clientes que residem em cidade <b>diferente</b> da obra (Compradores de fora).</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        with col_chart:
+            loc_df = pd.DataFrame({
+                "tipo_compra": ["Outras Cidades"] * len(cross_city) + ["Cidade Local"] * len(same_city),
+                "quantidade": 1
+            })
+            COLOR_MAP_LOC = {"Outras Cidades": "#8f8f96", "Cidade Local": "#2a9d45"}
+            grafico_donut(
+                loc_df,
+                dim='tipo_compra',
+                valor='quantidade',
+                titulo='Comportamento Geográfico',
+                color_map=COLOR_MAP_LOC,
+                total_centro=True,
+                altura=260,
+            )
+
     st.divider()
     col_ccli, col_cobr = st.columns(2)
     
@@ -336,45 +337,47 @@ with tab_location:
         
         bairro_counts = bairro_df['bairro_cli_limpo'].value_counts().reset_index().head(15)
         bairro_counts.columns = ['bairro', 'clientes']
-        
+        total_bairros_cados = len(bairro_df)
+
+        if not bairro_counts.empty:
+            st.markdown(f"<div style='margin-bottom:10px;'>Total de compradores com bairros informados: <b>{total_bairros_cados:,}</b></div>", unsafe_allow_html=True)
+
         with col_b1:
             if not bairro_counts.empty:
-                fig_bairro = px.bar(
-                    bairro_counts,
-                    y='bairro',
-                    x='clientes',
-                    orientation='h',
-                    color='clientes',
-                    color_continuous_scale=px.colors.sequential.Greens
-                )
-                fig_bairro.update_layout(
-                    **{
-                        **_LAYOUT_BASE,
-                        **dict(
-                            height=450,
-                            title=_titulo_layout("Top 15 Bairros dos Compradores"),
-                            xaxis=dict(title="Número de Clientes", gridcolor="#eef1f5", griddash="dot"),
-                            yaxis=dict(title=None),
-                            coloraxis_showscale=False
-                        )
-                    }
-                )
-                fig_bairro.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
-                st.plotly_chart(fig_bairro, use_container_width=True)
+                with st.container(key="dfc_bairros_chart"):
+                    fig_bairro = px.bar(
+                        bairro_counts,
+                        y='bairro',
+                        x='clientes',
+                        orientation='h',
+                        color_discrete_sequence=["#2a9d45"],
+                    )
+                    fig_bairro.update_layout(
+                        **{
+                            **_LAYOUT_BASE,
+                            **dict(
+                                height=450,
+                                title=_titulo_layout("Top 15 Bairros dos Compradores"),
+                                xaxis=dict(title="Número de Clientes", gridcolor="#eef1f5", griddash="dot"),
+                                yaxis=dict(title=None, categoryorder="total ascending"),
+                            )
+                        }
+                    )
+                    fig_bairro.update_traces(marker_cornerradius=8, selector=dict(type="bar"))
+                    st.plotly_chart(fig_bairro, use_container_width=True)
             else:
                 st.info("Nenhum dado de bairro detalhado disponível para esta seleção.")
-                
+
         with col_b2:
             if not bairro_counts.empty:
-                total_bairros_cados = len(bairro_df)
                 bairro_counts['%'] = (bairro_counts['clientes'] / total_bairros_cados) * 100
                 bairro_counts['%'] = bairro_counts['%'].round(1).astype(str) + '%'
-                
-                st.markdown(f"<div style='margin-bottom:10px;'>Total de compradores com bairros informados: <b>{total_bairros_cados:,}</b></div>", unsafe_allow_html=True)
+
                 dataframe_card(
                     bairro_counts,
                     "Bairros de origem",
                     key="bairros_origem",
+                    height=398,
                     column_config={
                         "bairro": "Bairro de Origem",
                         "clientes": st.column_config.NumberColumn("Qtd. Clientes", format="%d"),
