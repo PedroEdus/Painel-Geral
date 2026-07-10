@@ -359,9 +359,10 @@ div[role="radiogroup"] div[data-baseweb="radio"] input:checked + div div:first-c
   .fn-pct {{ font-size: 10px !important; right: 2px !important; }}
   .fn-tip {{ left: 1px !important; width: 14px !important; height: 14px !important; font-size: 9px !important; }}
   .fn-tip .fn-tipbox {{ left: 18px !important; width: 170px !important; }}
-  /* "Venda Perdida" sai do absoluto e flui abaixo do funil (sem sobrepor) */
-  .fn-loss {{ position: static !important; bottom: auto !important; left: auto !important;
-    margin-top: 12px !important; display: inline-flex !important; }}
+  /* "Venda Perdida" / "Acompanhamento" saem do absoluto e fluem abaixo do funil (sem sobrepor) */
+  .fn-loss, .fn-acomp {{ position: static !important; bottom: auto !important; left: auto !important;
+    right: auto !important; margin-top: 12px !important; margin-right: 8px !important;
+    display: inline-flex !important; }}
 }}
 </style>
 """

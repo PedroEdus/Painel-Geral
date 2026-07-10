@@ -206,20 +206,23 @@ def _derivar_campos(df: pd.DataFrame) -> pd.DataFrame:
         etapa_n.isin(["FECHAMENTO", "NEGOCIACAO", "POS - ATENDIMENTO", "PASTA COMPLETA"]),
         status_n.str.contains(r"VISITA|AGENDAMENTO|AGENDADO", na=False)
         | etapa_n.str.contains(r"AGENDAMENTO", na=False),
-        etapa_n.isin(["MARKETING DIGITAL", "LEAD"]),
-        etapa_n.isin(["PROSPECCAO", "PROSPECT", "ATENDIMENTO", "EM ATENDIMENTO",
-                      "ATENDIMENTO SDR", "AGUARDANDO ATENDIMENTO SDR",
-                      "EM ATENDIMENTO COM SDR", "PARA ATENDIMENTO DO CORRETOR"]),
-        etapa_n.isin(["ACOMPANHAMENTO", "NUTRICAO", "QUALIFICACAO", "REMARKETING"]),
+        etapa_n == "AGUARDANDO ATENDIMENTO SDR",
+        etapa_n.isin(["EM ATENDIMENTO COM SDR", "ATENDIMENTO SDR"]),
+        etapa_n == "PROSPECT",
+        etapa_n.isin(["ACOMPANHAMENTO", "NUTRICAO", "REMARKETING"]),
+        etapa_n.isin(["PROSPECCAO", "ATENDIMENTO", "EM ATENDIMENTO", "QUALIFICACAO",
+                      "MARKETING DIGITAL", "LEAD", "PARA ATENDIMENTO DO CORRETOR"]),
     ]
     choices = [
         "Venda Ganha",
         "Venda Perdida",
         "Negociação",
         "Visita Agendada",
-        "Aguardando Atendimento",
-        "Em Atendimento",
+        "Aguardando atendimento SDR",
+        "Em atendimento com SDR",
+        "Aguardando contato do corretor",
         "Acompanhamento",
+        "Em atendimento com corretor",
     ]
     df["Etapa_NF"] = np.select(conds, choices, default="Outros")
 

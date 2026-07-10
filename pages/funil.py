@@ -89,25 +89,41 @@ _VERDE_CLARO  = "#4ab861"
 _VERDE_BRILHO = "#7dd190"
 _BRANCO       = "#8f8f96"
 
+# Tons intermediários para os buckets de atendimento/aguardando, que agora
+# vieram do depara em versões mais granulares (SDR / corretor)
+_VERDE_1 = "#0f3d1c"  # Aguardando atendimento SDR (mais cedo no funil)
+_VERDE_4 = "#217a35"  # Em atendimento com corretor
+_VERDE_6 = "#3aab52"  # Visita Agendada
+
+# Grupos usados para métricas agregadas (aging, comparativo por funil, matriz)
+# — o depara do CRM ficou mais granular, essas métricas somam o grupo inteiro.
+_GRUPO_AGUARDANDO  = ["Aguardando atendimento SDR", "Aguardando contato do corretor"]
+_GRUPO_ATENDIMENTO = ["Em atendimento com SDR", "Em atendimento com corretor"]
+_GRUPO_ATIVOS      = _GRUPO_AGUARDANDO + _GRUPO_ATENDIMENTO + ["Visita Agendada", "Negociação"]
+
 COLOR_MAP = {
-    "Aguardando Atendimento": _VERDE_ESCURO,
-    "Em Atendimento":         _VERDE_MEDIO,
-    "Visita Agendada":        _VERDE_BASE,
-    "Negociação":             _VERDE_CLARO,
-    "Venda Ganha":            _VERDE_BRILHO,
-    "Venda Perdida":          _BRANCO,
-    "Acompanhamento":         "#335544",
-    "Outros":                 "#444444",
-    "On":                     _VERDE_BASE,
-    "Off":                    _BRANCO,
+    "Aguardando atendimento SDR":      _VERDE_1,
+    "Em atendimento com SDR":          _VERDE_MEDIO,
+    "Aguardando contato do corretor":  _VERDE_ESCURO,
+    "Em atendimento com corretor":     _VERDE_4,
+    "Visita Agendada":                 _VERDE_6,
+    "Negociação":                      _VERDE_CLARO,
+    "Venda Ganha":                     _VERDE_BRILHO,
+    "Venda Perdida":                   _BRANCO,
+    "Acompanhamento":                  "#335544",
+    "Outros":                          "#444444",
+    "On":                              _VERDE_BASE,
+    "Off":                             _BRANCO,
 }
 
 ORDEM_FUNIL = [
     "Venda Ganha",
     "Negociação",
     "Visita Agendada",
-    "Em Atendimento",
-    "Aguardando Atendimento",
+    "Em atendimento com corretor",
+    "Aguardando contato do corretor",
+    "Em atendimento com SDR",
+    "Aguardando atendimento SDR",
 ]
 
 POR_PAGINA = 20
@@ -261,14 +277,16 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
             return 0
         return int(df_in["Etapa_NF"].eq(etapa).sum())
 
-    aguardando  = _conta("Aguardando Atendimento")
-    atendimento = _conta("Em Atendimento")
+    aguard_sdr  = _conta("Aguardando atendimento SDR")
+    atend_sdr   = _conta("Em atendimento com SDR")
+    aguard_cor  = _conta("Aguardando contato do corretor")
+    atend_cor   = _conta("Em atendimento com corretor")
     visita      = _conta("Visita Agendada")
     negociacao  = _conta("Negociação")
     ganhas      = _conta("Venda Ganha")
     perdidas    = _conta("Venda Perdida")
     acompanhamento = _conta("Acompanhamento")
-    
+
     p_ganhas = f"{ganhas / total:.1%} do total" if total else "0% do total"
     p_perdidas = f"{perdidas / total:.1%} do total" if total else "0% do total"
     p_acomp = f"{acompanhamento / total:.1%} do total" if total else "0% do total"
@@ -282,14 +300,16 @@ def exibir_kpis(df_in: pd.DataFrame) -> None:
     _tm_geral = round(float(_t_all_kpi.mean()), 1) if not _t_all_kpi.empty else None
     _tm_fech  = round(float(_t_ganhas_kpi.mean()), 1) if not _t_ganhas_kpi.empty else None
 
-    cols = st.columns(7)
+    cols = st.columns(9)
     cols[0].metric("Total de Leads", _br(total))
-    cols[1].metric("Aguardando", _br(aguardando))
-    cols[2].metric("Em Atendimento", _br(atendimento))
-    cols[3].metric("Visita Agendada", _br(visita))
-    cols[4].metric("Negociação", _br(negociacao))
-    cols[5].metric("Venda Ganha", _br(ganhas), delta=p_ganhas, delta_color="normal")
-    cols[6].metric("Venda Perdida", _br(perdidas), delta=p_perdidas, delta_color="inverse")
+    cols[1].metric("Aguard. SDR", _br(aguard_sdr))
+    cols[2].metric("Atend. SDR", _br(atend_sdr))
+    cols[3].metric("Aguard. Corretor", _br(aguard_cor))
+    cols[4].metric("Atend. Corretor", _br(atend_cor))
+    cols[5].metric("Visita Agendada", _br(visita))
+    cols[6].metric("Negociação", _br(negociacao))
+    cols[7].metric("Venda Ganha", _br(ganhas), delta=p_ganhas, delta_color="normal")
+    cols[8].metric("Venda Perdida", _br(perdidas), delta=p_perdidas, delta_color="inverse")
 
 exibir_kpis(df_filtrado)
 st.divider()
@@ -311,11 +331,13 @@ with aba1:
     with col_a:
         # Funil de Vendas — HTML trapezoid customizado
         FUNIL_ETAPAS = [
-            ("Aguardando Atendimento", _VERDE_ESCURO),
-            ("Em Atendimento",         _VERDE_MEDIO),
-            ("Visita Agendada",        _VERDE_BASE),
-            ("Negociação",             _VERDE_CLARO),
-            ("Venda Ganha",            _VERDE_BRILHO),
+            ("Aguardando atendimento SDR",     _VERDE_1),
+            ("Em atendimento com SDR",         _VERDE_MEDIO),
+            ("Aguardando contato do corretor", _VERDE_ESCURO),
+            ("Em atendimento com corretor",    _VERDE_4),
+            ("Visita Agendada",                _VERDE_6),
+            ("Negociação",                     _VERDE_CLARO),
+            ("Venda Ganha",                    _VERDE_BRILHO),
         ]
         contagem     = df_filtrado["Etapa_NF"].value_counts().to_dict()
         etapas_ativas = [(e, c, contagem.get(e, 0)) for e, c in FUNIL_ETAPAS if contagem.get(e, 0) > 0]
@@ -335,17 +357,17 @@ with aba1:
                 ml_n  = (100 - w_n) / 2
                 pct   = count / total_base * 100 if total_base else 0
                 stages_html += f"""
-                <div style="position:relative;margin-bottom:3px;height:83px;">
-                  {trapezio_svg(ml, ml_n, cor, h=83)}
+                <div style="position:relative;margin-bottom:2px;height:58px;">
+                  {trapezio_svg(ml, ml_n, cor, h=58)}
                   <div style="position:absolute;inset:0;display:flex;align-items:center;
-                    justify-content:center;flex-direction:column;gap:3px;pointer-events:none;">
-                    <span class="fn-num" style="font-size:22px;font-weight:800;color:#fff;
+                    justify-content:center;flex-direction:column;gap:2px;pointer-events:none;">
+                    <span class="fn-num" style="font-size:16px;font-weight:800;color:#fff;
                       font-family:'Roboto Condensed',sans-serif;">{_br(count)}</span>
-                    <span style="font-size:9px;font-weight:600;color:rgba(255,255,255,0.82);
-                      text-transform:uppercase;letter-spacing:1.2px;">{etapa}</span>
+                    <span style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.82);
+                      text-transform:uppercase;letter-spacing:1px;">{etapa}</span>
                   </div>
                   <div class="fn-pct" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
-                    color:#6b6b74;font-size:12px;font-weight:700;
+                    color:#6b6b74;font-size:10px;font-weight:700;
                     font-family:'Roboto Condensed',sans-serif;">{pct:.1f}%</div>
                 </div>"""
 
@@ -361,32 +383,73 @@ with aba1:
                     title="Passagem {etapa} → {etapas_ativas[i + 1][0]}">▼ {conv:.1f}%</span>
                 </div>"""
 
+            acomp      = contagem.get("Acompanhamento", 0)
+
             perdidas_html = ""
             if perdidas:
                 pct_p = perdidas / total_base * 100 if total_base else 0
                 perdidas_html = f"""
-                <div class="fn-loss" style="position:absolute;bottom:22px;left:22px;
-                  display:flex;flex-direction:column;align-items:flex-start;gap:2px;
-                  padding:10px 14px;border-radius:6px;
+                <div class="fn-loss" style="position:absolute;bottom:14px;left:16px;
+                  display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+                  padding:7px 11px;border-radius:6px;white-space:nowrap;
                   background:rgba(231,76,60,0.10);border:1px solid rgba(231,76,60,0.22);">
-                  <span style="font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
-                    color:#8f8f96;">Venda Perdida</span>
-                  <span style="font-size:22px;font-weight:800;color:#ef4444;
-                    font-family:'Roboto Condensed',sans-serif;line-height:1;">{_br(perdidas)}</span>
-                  <span style="font-size:11px;color:rgba(231,76,60,0.65);
-                    font-family:'Roboto Condensed',sans-serif;">{pct_p:.1f}%</span>
+                  <span style="font-size:8px;text-transform:uppercase;letter-spacing:1px;
+                    color:#8f8f96;line-height:1;">Venda Perdida</span>
+                  <span style="font-size:16px;font-weight:800;color:#ef4444;
+                    font-family:'Roboto Condensed',sans-serif;line-height:1.15;">{_br(perdidas)}</span>
+                  <span style="font-size:10px;color:rgba(231,76,60,0.65);
+                    font-family:'Roboto Condensed',sans-serif;line-height:1;">{pct_p:.1f}%</span>
                 </div>"""
 
+            acomp_html = ""
+            if acomp:
+                pct_a = acomp / total_base * 100 if total_base else 0
+                _ACOMP_TIP = (
+                    "Leads em nutrição/remarketing: saíram do atendimento ativo "
+                    "(SDR/corretor) mas seguem na base pra reengajamento futuro. "
+                    "Não contam no fluxo principal do funil."
+                )
+                acomp_html = f"""
+                <div class="fn-acomp" style="position:absolute;bottom:14px;right:16px;z-index:2;
+                  display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+                  padding:7px 11px;border-radius:6px;white-space:nowrap;
+                  background:#eef2f0;border:1px solid rgba(51,85,68,0.32);">
+                  <span style="font-size:8px;text-transform:uppercase;letter-spacing:1px;
+                    color:#8f8f96;line-height:1;">Acompanhamento
+                    <span class="fn-info">?<span class="fn-infobox">{_ACOMP_TIP}</span></span>
+                  </span>
+                  <span style="font-size:16px;font-weight:800;color:#335544;
+                    font-family:'Roboto Condensed',sans-serif;line-height:1.15;">{_br(acomp)}</span>
+                  <span style="font-size:10px;color:rgba(51,85,68,0.75);
+                    font-family:'Roboto Condensed',sans-serif;line-height:1;">{pct_a:.1f}%</span>
+                </div>"""
+
+            _html("""
+            <style>
+            .fn-info{position:relative;display:inline-flex;align-items:center;justify-content:center;
+              width:11px;height:11px;border-radius:50%;background:#fff;border:1px solid #335544;
+              color:#335544;font-size:8px;font-weight:700;margin-left:2px;cursor:help;
+              vertical-align:middle;text-transform:none;letter-spacing:normal;}
+            .fn-info .fn-infobox{visibility:hidden;opacity:0;position:absolute;bottom:16px;right:0;
+              background:#232329;color:#f5f5f6;font-size:11px;font-weight:400;line-height:1.5;
+              padding:8px 11px;border-radius:7px;width:210px;text-align:left;white-space:normal;
+              text-transform:none;letter-spacing:normal;box-shadow:0 4px 14px rgba(0,0,0,.28);
+              transition:opacity .15s;z-index:9999;}
+            .fn-info:hover .fn-infobox{visibility:visible;opacity:1;}
+            </style>
+            """)
+
             _html(f"""
-            <div class="pub-card" style="padding:22px 22px 18px;position:relative;">
-              <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;
-                color:#8f8f96;margin-bottom:4px;">Base Total</div>
-              <div style="font-size:34px;font-weight:800;color:#232329;
-                font-family:'Roboto Condensed',sans-serif;margin-bottom:20px;">{_br(total_base)}</div>
-              <div class="fn-stages" style="padding-right:52px;">
+            <div class="pub-card" style="padding:16px 18px 14px;position:relative;">
+              <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;
+                color:#8f8f96;margin-bottom:3px;">Base Total</div>
+              <div style="font-size:26px;font-weight:800;color:#232329;
+                font-family:'Roboto Condensed',sans-serif;margin-bottom:12px;">{_br(total_base)}</div>
+              <div class="fn-stages" style="padding-right:44px;">
                 {stages_html}
               </div>
               {perdidas_html}
+              {acomp_html}
             </div>
             """)
         else:
@@ -513,7 +576,7 @@ with aba_perdas:
                 "encerrados e não fazem mais parte do funil em andamento. "
                 "Dias parados = hoje − última alteração (DataAlteracao)."
             )
-            _ATIVOS = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
+            _ATIVOS = _GRUPO_ATIVOS
             if {"DataAlteracao", "Etapa_NF"}.issubset(df_filtrado.columns):
                 df_ag = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS)].copy()
                 df_ag["DataAlteracao"] = pd.to_datetime(df_ag["DataAlteracao"], errors="coerce")
@@ -598,8 +661,8 @@ with aba_perdas:
             perdidas = int(df_g["Etapa_NF"].eq("Venda Perdida").sum())
             negoc    = int(df_g["Etapa_NF"].eq("Negociação").sum())
             visita   = int(df_g["Etapa_NF"].eq("Visita Agendada").sum())
-            atend    = int(df_g["Etapa_NF"].eq("Em Atendimento").sum())
-            aguard   = int(df_g["Etapa_NF"].eq("Aguardando Atendimento").sum())
+            atend    = int(df_g["Etapa_NF"].isin(_GRUPO_ATENDIMENTO).sum())
+            aguard   = int(df_g["Etapa_NF"].isin(_GRUPO_AGUARDANDO).sum())
             acomp    = int(df_g["Etapa_NF"].eq("Acompanhamento").sum())
             pipeline = atend + visita + negoc + ganhas
             visita_plus = visita + negoc + ganhas
@@ -694,14 +757,20 @@ with aba_perdas:
                 st.plotly_chart(_fig_vol, use_container_width=True, config=PLOTLY_CONFIG)
 
             with _col_tx:
-                _etapas_dur = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação", "Venda Ganha"]
+                _etapas_dur = {
+                    "Aguardando Atendimento": _GRUPO_AGUARDANDO,
+                    "Em Atendimento":         _GRUPO_ATENDIMENTO,
+                    "Visita Agendada":        ["Visita Agendada"],
+                    "Negociação":             ["Negociação"],
+                    "Venda Ganha":            ["Venda Ganha"],
+                }
                 _dur_rows = []
                 for _gn, _dg in [(_g, df_comp[df_comp["_Grupo"] == _g]) for _g in grupos_dados]:
                     if "TempoCiclo_h" not in _dg.columns:
                         continue
-                    for _et in _etapas_dur:
+                    for _et, _valores in _etapas_dur.items():
                         _sub = _dg.loc[
-                            _dg["Etapa_NF"].eq(_et) & _dg["TempoCiclo_h"].notna() & (_dg["TempoCiclo_h"] > 0),
+                            _dg["Etapa_NF"].isin(_valores) & _dg["TempoCiclo_h"].notna() & (_dg["TempoCiclo_h"] > 0),
                             "TempoCiclo_h"
                         ]
                         if not _sub.empty:
@@ -898,7 +967,7 @@ with aba4:
             "Negociação) sem alteração há mais de 7 dias, agrupados por responsável. "
             "Não inclui Venda Ganha nem Venda Perdida."
         )
-        _ATIVOS_OP = ["Aguardando Atendimento", "Em Atendimento", "Visita Agendada", "Negociação"]
+        _ATIVOS_OP = _GRUPO_ATIVOS
         if {"DataAlteracao", "Etapa_NF", "Responsavel", "Codigo"}.issubset(df_filtrado.columns):
             df_ag_op = df_filtrado[df_filtrado["Etapa_NF"].isin(_ATIVOS_OP)].copy()
             df_ag_op["DataAlteracao"] = pd.to_datetime(df_ag_op["DataAlteracao"], errors="coerce")
@@ -935,8 +1004,8 @@ with aba5:
     df_mat["Responsavel"] = df_mat["Responsavel"].fillna("Sem Responsável").astype(str).str.strip().replace({"": "Sem Responsável"})
     
     # Colunas com a contagem de leads por etapa do funil
-    df_mat["Aguardando"] = df_mat["Etapa_NF"].eq("Aguardando Atendimento").astype(int)
-    df_mat["Em_Atendimento"] = df_mat["Etapa_NF"].eq("Em Atendimento").astype(int)
+    df_mat["Aguardando"] = df_mat["Etapa_NF"].isin(_GRUPO_AGUARDANDO).astype(int)
+    df_mat["Em_Atendimento"] = df_mat["Etapa_NF"].isin(_GRUPO_ATENDIMENTO).astype(int)
     df_mat["Visita_Agendada"] = df_mat["Etapa_NF"].eq("Visita Agendada").astype(int)
     df_mat["Negociacao"] = df_mat["Etapa_NF"].eq("Negociação").astype(int)
     df_mat["Venda_Ganha"] = df_mat["Etapa_NF"].eq("Venda Ganha").astype(int)
