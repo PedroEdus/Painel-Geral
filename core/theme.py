@@ -123,6 +123,15 @@ div[data-testid="stMetricDelta"] {{ font-size: 12px !important; }}
 [data-testid="stColumn"]:has(div[data-testid="stMetric"]) [data-testid="stElementContainer"]:has(div[data-testid="stMetric"]) {{ height: 100% !important; }}
 [data-testid="stColumn"] div[data-testid="stMetric"] {{ height: 100% !important; box-sizing: border-box; }}
 
+/* Card do funil (trapézio): estica p/ acompanhar a altura da coluna vizinha
+   (donut + tempos), mesmo esquema de cadeia usado acima p/ o st.metric. */
+[data-testid="stColumn"]:has(.fn-visual-card) {{
+  display: flex !important; flex-direction: column !important; }}
+[data-testid="stColumn"]:has(.fn-visual-card) > div {{ flex: 1 1 auto !important; height: 100% !important; }}
+[data-testid="stColumn"]:has(.fn-visual-card) [data-testid="stVerticalBlock"] {{ height: 100% !important; }}
+[data-testid="stColumn"]:has(.fn-visual-card) [data-testid="stElementContainer"]:has(.fn-visual-card) {{ height: 100% !important; }}
+.fn-visual-card {{ height: 100% !important; box-sizing: border-box; }}
+
 /* ── Multiselect tags ── */
 span[data-baseweb="tag"] {{ background-color: {BRAND['500']} !important; }}
 span[data-baseweb="tag"] span[role="img"] svg path {{ fill: rgba(255,255,255,.85) !important; }}
@@ -359,10 +368,6 @@ div[role="radiogroup"] div[data-baseweb="radio"] input:checked + div div:first-c
   .fn-pct {{ font-size: 10px !important; right: 2px !important; }}
   .fn-tip {{ left: 1px !important; width: 14px !important; height: 14px !important; font-size: 9px !important; }}
   .fn-tip .fn-tipbox {{ left: 18px !important; width: 170px !important; }}
-  /* "Venda Perdida" / "Acompanhamento" saem do absoluto e fluem abaixo do funil (sem sobrepor) */
-  .fn-loss, .fn-acomp {{ position: static !important; bottom: auto !important; left: auto !important;
-    right: auto !important; margin-top: 12px !important; margin-right: 8px !important;
-    display: inline-flex !important; }}
 }}
 </style>
 """

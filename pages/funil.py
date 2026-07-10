@@ -349,6 +349,16 @@ with aba1:
             W_TOP, W_BOT = 90, 32
             step_w = (W_TOP - W_BOT) / max(n - 1, 1)
 
+            # Altura do estágio calculada a partir de n → funil acompanha a
+            # altura da coluna vizinha (donut + tempos) mesmo quando o número
+            # de etapas ativas muda (ex.: etapa com 0 leads some da lista).
+            _TARGET_STAGES_H = 460
+            _BADGE_H = 14
+            row_h = max(30, min(60, round((_TARGET_STAGES_H - (n - 1) * _BADGE_H) / n) - 1))
+            num_font = max(11, min(16, round(row_h * 0.28)))
+            label_font = max(7, min(9, round(row_h * 0.15)))
+            pct_font = max(9, min(10, round(row_h * 0.19)))
+
             stages_html = ""
             for i, (etapa, cor, count) in enumerate(etapas_ativas):
                 w     = W_TOP - i * step_w
@@ -357,17 +367,17 @@ with aba1:
                 ml_n  = (100 - w_n) / 2
                 pct   = count / total_base * 100 if total_base else 0
                 stages_html += f"""
-                <div style="position:relative;margin-bottom:2px;height:58px;">
-                  {trapezio_svg(ml, ml_n, cor, h=58)}
+                <div style="position:relative;margin-bottom:1px;height:{row_h}px;">
+                  {trapezio_svg(ml, ml_n, cor, h=row_h)}
                   <div style="position:absolute;inset:0;display:flex;align-items:center;
-                    justify-content:center;flex-direction:column;gap:2px;pointer-events:none;">
-                    <span class="fn-num" style="font-size:16px;font-weight:800;color:#fff;
+                    justify-content:center;flex-direction:column;gap:1px;pointer-events:none;">
+                    <span class="fn-num" style="font-size:{num_font}px;font-weight:800;color:#fff;
                       font-family:'Roboto Condensed',sans-serif;">{_br(count)}</span>
-                    <span style="font-size:8px;font-weight:600;color:rgba(255,255,255,0.82);
-                      text-transform:uppercase;letter-spacing:1px;">{etapa}</span>
+                    <span style="font-size:{label_font}px;font-weight:600;color:rgba(255,255,255,0.82);
+                      text-transform:uppercase;letter-spacing:0.8px;">{etapa}</span>
                   </div>
                   <div class="fn-pct" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);
-                    color:#6b6b74;font-size:10px;font-weight:700;
+                    color:#6b6b74;font-size:{pct_font}px;font-weight:700;
                     font-family:'Roboto Condensed',sans-serif;">{pct:.1f}%</div>
                 </div>"""
 
@@ -376,10 +386,10 @@ with aba1:
                     prox_count = etapas_ativas[i + 1][2]
                     conv = prox_count / count * 100 if count else 0
                     stages_html += f"""
-                <div style="display:flex;justify-content:center;margin:-1px 0 2px;">
-                  <span style="font-size:10px;font-weight:700;color:rgba(0,204,102,0.9);
+                <div style="display:flex;justify-content:center;margin:-1px 0 1px;">
+                  <span style="font-size:9px;font-weight:700;color:rgba(0,204,102,0.9);
                     font-family:'Roboto Condensed',sans-serif;background:rgba(0,204,102,0.08);
-                    border:1px solid rgba(0,204,102,0.22);border-radius:10px;padding:1px 9px;"
+                    border:1px solid rgba(0,204,102,0.22);border-radius:10px;padding:0px 8px;"
                     title="Passagem {etapa} → {etapas_ativas[i + 1][0]}">▼ {conv:.1f}%</span>
                 </div>"""
 
@@ -389,7 +399,7 @@ with aba1:
             if perdidas:
                 pct_p = perdidas / total_base * 100 if total_base else 0
                 perdidas_html = f"""
-                <div class="fn-loss" style="position:absolute;bottom:14px;left:16px;
+                <div class="fn-loss" style="
                   display:flex;flex-direction:column;align-items:flex-start;gap:3px;
                   padding:7px 11px;border-radius:6px;white-space:nowrap;
                   background:rgba(231,76,60,0.10);border:1px solid rgba(231,76,60,0.22);">
@@ -410,7 +420,7 @@ with aba1:
                     "Não contam no fluxo principal do funil."
                 )
                 acomp_html = f"""
-                <div class="fn-acomp" style="position:absolute;bottom:14px;right:16px;z-index:2;
+                <div class="fn-acomp" style="
                   display:flex;flex-direction:column;align-items:flex-start;gap:3px;
                   padding:7px 11px;border-radius:6px;white-space:nowrap;
                   background:#eef2f0;border:1px solid rgba(51,85,68,0.32);">
@@ -423,6 +433,13 @@ with aba1:
                   <span style="font-size:10px;color:rgba(51,85,68,0.75);
                     font-family:'Roboto Condensed',sans-serif;line-height:1;">{pct_a:.1f}%</span>
                 </div>"""
+
+            boxes_row = ""
+            if perdidas_html or acomp_html:
+                boxes_row = (
+                    f'<div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;">'
+                    f'{perdidas_html}{acomp_html}</div>'
+                )
 
             _html("""
             <style>
@@ -440,16 +457,15 @@ with aba1:
             """)
 
             _html(f"""
-            <div class="pub-card" style="padding:16px 18px 14px;position:relative;">
+            <div class="pub-card fn-visual-card" style="padding:14px 16px 12px;position:relative;">
               <div style="font-size:9px;letter-spacing:2px;text-transform:uppercase;
-                color:#8f8f96;margin-bottom:3px;">Base Total</div>
-              <div style="font-size:26px;font-weight:800;color:#232329;
-                font-family:'Roboto Condensed',sans-serif;margin-bottom:12px;">{_br(total_base)}</div>
-              <div class="fn-stages" style="padding-right:44px;">
+                color:#8f8f96;margin-bottom:2px;">Base Total</div>
+              <div style="font-size:22px;font-weight:800;color:#232329;
+                font-family:'Roboto Condensed',sans-serif;margin-bottom:8px;">{_br(total_base)}</div>
+              <div class="fn-stages" style="padding-right:40px;">
                 {stages_html}
               </div>
-              {perdidas_html}
-              {acomp_html}
+              {boxes_row}
             </div>
             """)
         else:
@@ -1004,8 +1020,10 @@ with aba5:
     df_mat["Responsavel"] = df_mat["Responsavel"].fillna("Sem Responsável").astype(str).str.strip().replace({"": "Sem Responsável"})
     
     # Colunas com a contagem de leads por etapa do funil
-    df_mat["Aguardando"] = df_mat["Etapa_NF"].isin(_GRUPO_AGUARDANDO).astype(int)
-    df_mat["Em_Atendimento"] = df_mat["Etapa_NF"].isin(_GRUPO_ATENDIMENTO).astype(int)
+    df_mat["Aguard_SDR"] = df_mat["Etapa_NF"].eq("Aguardando atendimento SDR").astype(int)
+    df_mat["Atend_SDR"] = df_mat["Etapa_NF"].eq("Em atendimento com SDR").astype(int)
+    df_mat["Aguard_Corretor"] = df_mat["Etapa_NF"].eq("Aguardando contato do corretor").astype(int)
+    df_mat["Atend_Corretor"] = df_mat["Etapa_NF"].eq("Em atendimento com corretor").astype(int)
     df_mat["Visita_Agendada"] = df_mat["Etapa_NF"].eq("Visita Agendada").astype(int)
     df_mat["Negociacao"] = df_mat["Etapa_NF"].eq("Negociação").astype(int)
     df_mat["Venda_Ganha"] = df_mat["Etapa_NF"].eq("Venda Ganha").astype(int)
@@ -1019,8 +1037,10 @@ with aba5:
     col_specs_funil = [
         {"header": "Hierarquia (Cidade ➔ Produto ➔ Responsável)", "key": "name"},
         {"header": "Leads", "key": "Leads", "dec": 0},
-        {"header": "Aguardando", "key": "Aguardando", "dec": 0},
-        {"header": "Em Atendimento", "key": "Em_Atendimento", "dec": 0},
+        {"header": "Aguard. SDR", "key": "Aguard_SDR", "dec": 0},
+        {"header": "Atend. SDR", "key": "Atend_SDR", "dec": 0},
+        {"header": "Aguard. Corretor", "key": "Aguard_Corretor", "dec": 0},
+        {"header": "Atend. Corretor", "key": "Atend_Corretor", "dec": 0},
         {"header": "Visita Agendada", "key": "Visita_Agendada", "dec": 0},
         {"header": "Negociação", "key": "Negociacao", "dec": 0},
         {"header": "Venda Ganha", "key": "Venda_Ganha", "dec": 0},
@@ -1028,11 +1048,13 @@ with aba5:
         {"header": "Acompanhamento", "key": "Acompanhamento", "dec": 0},
         {"header": "Tempo Médio (h)", "key": "TempoCiclo_h", "is_text": True},
     ]
-    
+
     agg_rules_funil = {
         "Leads": "sum",
-        "Aguardando": "sum",
-        "Em_Atendimento": "sum",
+        "Aguard_SDR": "sum",
+        "Atend_SDR": "sum",
+        "Aguard_Corretor": "sum",
+        "Atend_Corretor": "sum",
         "Visita_Agendada": "sum",
         "Negociacao": "sum",
         "Venda_Ganha": "sum",
@@ -1065,7 +1087,7 @@ with aba5:
         col_specs=col_specs_funil,
         agg_rules=agg_rules_funil,
         derived_func=derived_funil,
-        grid_template="minmax(320px, 3fr) 0.7fr 0.9fr 1.1fr 1.1fr 0.9fr 0.9fr 0.9fr 1.1fr 1.1fr",
+        grid_template="minmax(300px, 3fr) 0.6fr 0.85fr 0.85fr 0.95fr 0.95fr 0.9fr 0.9fr 0.9fr 0.9fr 1.0fr 1.0fr",
         active_campaigns=None,
         key="funil_matrix_hierarquia",
         df_download=df_download,
