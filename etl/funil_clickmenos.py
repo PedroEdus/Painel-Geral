@@ -315,17 +315,19 @@ def _merge_sql(df: pd.DataFrame, staging: str, target: str) -> str:
 
 def upsert_bq(df: pd.DataFrame) -> None:
     """Carga incremental: stage do delta + MERGE por Codigo na tabela final.
-    # ponytail: staging autodetect; se uma coluna do delta vier 100% nula o
-    # tipo pode divergir do target e o MERGE falha. Se acontecer, fixar schema
-    # explícito no LoadJobConfig em vez de autodetect."""
+    Staging usa o schema do target (não autodetect): coluna 100% nula no delta
+    faria o autodetect divergir do tipo do target e quebrar o MERGE."""
     df = dedup_recente(df)  # garante ≤1 linha-fonte por Codigo (exigência do MERGE)
     client  = get_bq_client()
     target  = f"{PROJECT_ID}.{DATASET}.{TABELA}"
     staging = f"{PROJECT_ID}.{DATASET}.{TABELA}_staging"
 
+    # Schema parcial: colunas do df que existem no target herdam o tipo dele;
+    # colunas novas (se houver) seguem autodetectadas pelo client.
+    target_schema = [f for f in client.get_table(target).schema if f.name in df.columns]
     job_config = bigquery.LoadJobConfig(
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
-        autodetect=True,
+        schema=target_schema,
     )
     print(f"\nStaging {len(df)} linhas em {staging}…")
     client.load_table_from_dataframe(df, staging, job_config=job_config).result()
