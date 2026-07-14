@@ -44,6 +44,7 @@ if "DataMov" in df.columns:
             value=(default_inicio, data_max.date()),
             min_value=data_min.date(),
             max_value=data_max.date(),
+            format="DD/MM/YYYY",
         )
         if isinstance(periodo, list) or isinstance(periodo, tuple):
             # Compara por DATA (dia inteiro), igual à Visão Geral — senão o
@@ -785,12 +786,13 @@ with aba_perdas:
                 st.plotly_chart(_fig_vol, use_container_width=True, config=PLOTLY_CONFIG)
 
             with _col_tx:
+                # <br> quebra o rótulo em 2 linhas — evita o plotly rotacionar o eixo
                 _etapas_dur = {
-                    "Aguardando Atendimento": _GRUPO_AGUARDANDO,
-                    "Em Atendimento":         _GRUPO_ATENDIMENTO,
-                    "Visita Agendada":        ["Visita Agendada"],
-                    "Negociação":             ["Negociação"],
-                    "Venda Ganha":            ["Venda Ganha"],
+                    "Aguardando<br>Atendimento": _GRUPO_AGUARDANDO,
+                    "Em<br>Atendimento":         _GRUPO_ATENDIMENTO,
+                    "Visita<br>Agendada":        ["Visita Agendada"],
+                    "Negociação":                ["Negociação"],
+                    "Venda<br>Ganha":            ["Venda Ganha"],
                 }
                 _dur_rows = []
                 for _gn, _dg in [(_g, df_comp[df_comp["_Grupo"] == _g]) for _g in grupos_dados]:
@@ -816,14 +818,19 @@ with aba_perdas:
                         template=_tema(),
                     )
                     _fig_dur.update_traces(
-                        texttemplate="%{y:.1f}h", textposition="outside", cliponaxis=False,
+                        texttemplate="%{y:,.1f}h", textposition="outside", cliponaxis=False,
                         textfont=dict(size=11, color="#232329", family="Roboto Condensed, sans-serif"),
                     )
                     _fig_dur.update_layout(**{**_LAYOUT_BASE, **dict(
                         height=320,
                         title=_titulo_layout("Duração Média por Etapa (horas)"),
-                        xaxis=dict(title=None),
-                        yaxis=dict(title="Horas", gridcolor="#eef1f5", griddash="dot"),
+                        xaxis=dict(title=None, tickangle=0, showgrid=False, ticks="",
+                                   categoryorder="array",
+                                   categoryarray=list(_etapas_dur.keys()),
+                                   tickfont=dict(size=11, color="#6b6b74")),
+                        yaxis=dict(title=None, gridcolor="#eef1f5", griddash="dot",
+                                   zeroline=False, showline=False, ticks="",
+                                   range=[0, float(_df_dur["Horas"].max() or 1.0) * 1.22]),
                         legend=dict(
                             orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1,
                             font=dict(family="Roboto Condensed, sans-serif", size=11, color="#6b6b74"),
@@ -834,6 +841,98 @@ with aba_perdas:
 
             st.write("")
             dataframe_card(_tabela_grupo, "Resumo por grupo", key="resumo_grupo")
+
+    # ── Leads Expirados (flag do CRM) ─────────────────────────────────────────
+    if "Expirado" in df_filtrado.columns:
+        st.write("")
+        st.subheader("Leads Expirados")
+
+        _EXP_TOOLTIP = (
+            "Flag 'Expirado' vinda do CRM ClickMenos — lead que estourou o "
+            "prazo de atendimento configurado no CRM. "
+            "Taxa = expirados ÷ leads do recorte."
+        )
+
+        _df_exp = df_filtrado.copy()
+        # BQ entrega boolean; astype(str) cobre bool nativo e variações string
+        _df_exp["_Expirado"] = (
+            _df_exp["Expirado"].astype(str).str.strip().str.lower()
+            .isin(["true", "1", "sim", "verdadeiro"])
+        )
+        _tot_exp = int(_df_exp["_Expirado"].sum())
+        _pct_exp = (_tot_exp / len(_df_exp) * 100) if len(_df_exp) else 0.0
+        _html(
+            '<div class="pub-card-sub" style="display:flex;align-items:center;gap:6px;">'
+            f'{_br(_tot_exp)} leads expirados — {f"{_pct_exp:.1f}".replace(".", ",")}% da base filtrada'
+            f'<span class="help-dot" data-tip="{_EXP_TOOLTIP}">?</span></div>'
+        )
+
+        _col_exp_graf, _col_exp_resp = st.columns(2)
+
+        # Esquerda: quantidade de leads expirados por etapa do funil
+        with _col_exp_graf:
+            if "Etapa_NF" in _df_exp.columns:
+                _por_etapa = (
+                    _df_exp.groupby("Etapa_NF")
+                    .agg(Leads=("_Expirado", "size"), Expirados=("_Expirado", "sum"))
+                    .reset_index()
+                )
+                _por_etapa["Taxa"] = _por_etapa["Expirados"] / _por_etapa["Leads"] * 100
+                _ordem_et = [e for e in ORDEM_FUNIL if e in set(_por_etapa["Etapa_NF"])]
+                _ordem_et += [e for e in _por_etapa["Etapa_NF"] if e not in _ordem_et]
+                fig_exp = px.bar(
+                    _por_etapa, x="Etapa_NF", y="Expirados",
+                    color_discrete_sequence=["#f59e0b"],
+                    custom_data=["Leads", "Taxa"],
+                    template=_tema(),
+                )
+                fig_exp.update_traces(
+                    marker=dict(cornerradius=8, line_width=0),
+                    texttemplate="%{y:,.0f}", textposition="outside", cliponaxis=False,
+                    textfont=dict(size=12, color="#232329", family="Roboto Condensed, sans-serif"),
+                    hovertemplate="<b>%{x}</b><br>Expirados: <b>%{y:,.0f}</b> de "
+                                  "%{customdata[0]:,.0f} leads (%{customdata[1]:.1f}%)<extra></extra>",
+                )
+                fig_exp.update_layout(**{**_LAYOUT_BASE, **dict(
+                    height=380, showlegend=False, bargap=0.45,
+                    title=dict(text=""),
+                    margin=dict(l=20, r=20, t=10, b=20),
+                    xaxis=dict(title=None, showgrid=False, ticks="",
+                               categoryorder="array", categoryarray=_ordem_et,
+                               tickfont=dict(size=11, color="#6b6b74")),
+                    yaxis=dict(title=None, gridcolor="#eef1f5", griddash="dot",
+                               zeroline=False, showline=False, ticks="",
+                               range=[0, float(_por_etapa["Expirados"].max() or 1.0) * 1.2]),
+                )})
+                with st.container(key="dfc_expirado_etapa"):
+                    _html('<div class="pub-card-title">Leads Expirados por Etapa</div>')
+                    st.plotly_chart(fig_exp, use_container_width=True, config=PLOTLY_CONFIG)
+
+        # Direita: tabela por responsável — volume mínimo evita taxa enganosa
+        with _col_exp_resp:
+            if "Responsavel" in _df_exp.columns:
+                _por_resp = (
+                    _df_exp.assign(Responsavel=(
+                        _df_exp["Responsavel"].fillna("Sem Responsável").astype(str)
+                        .str.strip().replace({"": "Sem Responsável"})
+                    ))
+                    .groupby("Responsavel")
+                    .agg(Leads=("_Expirado", "size"), Expirados=("_Expirado", "sum"))
+                    .reset_index()
+                )
+                _por_resp = _por_resp[_por_resp["Leads"] >= 20]
+                _por_resp["Taxa (%)"] = (_por_resp["Expirados"] / _por_resp["Leads"] * 100).round(1)
+                _por_resp = (
+                    _por_resp.sort_values(["Taxa (%)", "Leads"], ascending=False)
+                    .head(20).set_index("Responsavel")
+                )
+                if not _por_resp.empty:
+                    dataframe_card(
+                        _por_resp,
+                        "Expiração por responsável (top 20, mín. 20 leads)",
+                        key="expirado_responsavel",
+                        height=380,
+                    )
 
 # ── Aba 2: Origem e Campanhas ─────────────────────────────────────────────────
 with aba2:
