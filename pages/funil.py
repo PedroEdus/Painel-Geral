@@ -25,28 +25,36 @@ if df.empty:
 # ── Filtros (Sidebar) ─────────────────────────────────────────────────────────
 st.sidebar.header("Filtros")
 
-# 1. Período de cadastro
-if "DataCadastro" in df.columns:
-    data_min = df["DataCadastro"].min()
-    data_max = df["DataCadastro"].max()
+# 1. Período de alteração (última movimentação do lead no CRM).
+#    Leads sem DataAlteracao registrada contam pela data de cadastro.
+if "DataAlteracao" in df.columns:
+    df["DataMov"] = df["DataAlteracao"]
+    if "DataCadastro" in df.columns:
+        df["DataMov"] = df["DataMov"].fillna(df["DataCadastro"])
+elif "DataCadastro" in df.columns:
+    df["DataMov"] = df["DataCadastro"]
+
+if "DataMov" in df.columns:
+    data_min = df["DataMov"].min()
+    data_max = df["DataMov"].max()
     if pd.notna(data_min) and pd.notna(data_max):
         default_inicio = max(date(2026, 1, 1), data_min.date())
         periodo = st.sidebar.date_input(
-            "Período de cadastro",
+            "Período de alteração",
             value=(default_inicio, data_max.date()),
             min_value=data_min.date(),
             max_value=data_max.date(),
         )
         if isinstance(periodo, list) or isinstance(periodo, tuple):
             # Compara por DATA (dia inteiro), igual à Visão Geral — senão o
-            # filtro <= meia-noite do último dia corta os leads cadastrados
-            # mais tarde no dia (divergia da Visão Geral).
+            # filtro <= meia-noite do último dia corta os leads movimentados
+            # mais tarde no dia.
             if len(periodo) == 2:
                 _ini, _fim = pd.to_datetime(periodo[0]).date(), pd.to_datetime(periodo[1]).date()
-                df = df[(df["DataCadastro"].dt.date >= _ini) & (df["DataCadastro"].dt.date <= _fim)]
+                df = df[(df["DataMov"].dt.date >= _ini) & (df["DataMov"].dt.date <= _fim)]
             elif len(periodo) == 1:
                 _dia = pd.to_datetime(periodo[0]).date()
-                df = df[df["DataCadastro"].dt.date == _dia]
+                df = df[df["DataMov"].dt.date == _dia]
 
 # List of filters we want to apply
 FILTROS = [
@@ -522,13 +530,17 @@ with aba1:
         </div>
         """)
 
-    # Evolução temporal de leads (Diário e Mensal) — card com slicer integrado
+    # Evolução temporal de leads (Diário e Mensal) — card com slicer integrado.
+    # Eixo por data de CADASTRO (decisão de produto), mesmo com o filtro de
+    # período sendo por data de alteração — leads movimentados no período
+    # podem aparecer em datas anteriores a ele no gráfico.
     if "DataCadastro" in df_filtrado.columns:
         _df_ev = df_filtrado[["DataCadastro"]].copy()
         _df_ev["Leads"] = 1
         grafico_evolucao(
             _df_ev, "DataCadastro", "Leads", "Evolução de Leads CRM",
             cor=_VERDE_BASE, key="funil_temporal",
+            subtitulo="Por data de cadastro do lead.",
         )
 
 # ── Aba "Perdas & Desempenho" ─────────────────────────────────────────────────
@@ -1075,7 +1087,7 @@ with aba5:
             
     # Cria o dataframe de download contendo todas as colunas
     colunas_dl = [
-        "Codigo", "Nome", "Produto", "Cidade", "DataCadastro",
+        "Codigo", "Nome", "Produto", "Cidade", "DataCadastro", "DataAlteracao",
         "FormaCadastro", "UtmCampaign", "UtmMedium", "UtmSource",
         "Etapa", "Status", "Etapa_NF", "On_Off", "Responsavel", "TempoCiclo_h",
     ]
