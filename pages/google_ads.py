@@ -50,7 +50,7 @@ df_orig = df.copy()
 # 1. Período
 dmin, dmax = df["date"].min().date(), df["date"].max().date()
 default_start = max(date(2026, 1, 1), dmin)
-periodo = st.sidebar.date_input("Período", value=(default_start, dmax), min_value=dmin, max_value=dmax)
+periodo = st.sidebar.date_input("Período", value=(default_start, dmax), min_value=dmin, max_value=dmax, format="DD/MM/YYYY")
 if isinstance(periodo, tuple) and len(periodo) == 2:
     df = df[(df["date"].dt.date >= periodo[0]) & (df["date"].dt.date <= periodo[1])]
 

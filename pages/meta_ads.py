@@ -52,7 +52,8 @@ if "date_start" in df.columns:
         data_min, data_max = min(datas), max(datas)
         default_start = max(date(2026, 1, 1), data_min)
         data_sel = st.sidebar.date_input(
-            "Período", [default_start, data_max], min_value=data_min, max_value=data_max
+            "Período", [default_start, data_max], min_value=data_min, max_value=data_max,
+            format="DD/MM/YYYY",
         )
         if isinstance(data_sel, list) or isinstance(data_sel, tuple):
             if len(data_sel) == 2:

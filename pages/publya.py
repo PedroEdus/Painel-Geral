@@ -59,12 +59,14 @@ data_inicio_sel = st.sidebar.date_input(
     value=max(date(2026, 1, 1), data_min_global),
     min_value=data_min_global,
     max_value=data_max_global,
+    format="DD/MM/YYYY",
 )
 data_fim_sel = st.sidebar.date_input(
     "Data fim (até)",
     value=data_max_global,
     min_value=data_min_global,
     max_value=data_max_global,
+    format="DD/MM/YYYY",
 )
 
 # ── Aplicar Filtros ───────────────────────────────────────────────────────────

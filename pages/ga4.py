@@ -76,6 +76,7 @@ date_range = st.sidebar.date_input(
     value=(default_start, max_date),
     min_value=min_date,
     max_value=max_date,
+    format="DD/MM/YYYY",
 )
 
 dt_ini, dt_fim = pd.Timestamp(min_date), pd.Timestamp(max_date)

@@ -71,7 +71,8 @@ periodo_sel = st.sidebar.date_input(
     "Período Global",
     value=(date(2026, 1, 1), date(2026, 12, 31)),
     min_value=limit_min,
-    max_value=limit_max
+    max_value=limit_max,
+    format="DD/MM/YYYY",
 )
 
 start_date, end_date = global_min, global_max
