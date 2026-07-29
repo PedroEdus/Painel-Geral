@@ -937,45 +937,8 @@ with aba2:
         resumo_camp = _agrupar(df_filtrado, "UtmCampaign", top=15)
         _barras_card(resumo_camp, "Leads", "UtmCampaign", "Top campanhas", "bar_campanha")
 
-    if {"UtmSource", "Etapa_NF"}.issubset(df_filtrado.columns):
-        df_mat = df_filtrado.copy()
-        df_mat["UtmSource"] = _resolver_origem(df_mat)
-        df_mat = df_mat.dropna(subset=["Etapa_NF"])
-        if not df_mat.empty:
-            dataframe_card(
-                pd.crosstab(df_mat["UtmSource"], df_mat["Etapa_NF"]),
-                "Matriz origem × etapa",
-                key="matriz_origem_etapa",
-                height=460,
-            )
-
-# ── Aba 3: Cidades e Cadastro ─────────────────────────────────────────────────
-with aba3:
-    # Listas maiores lado a lado: Top cidades + Estado de Origem
-    col_cid, col_est = st.columns(2)
-
-    with col_cid:
-        df_cid = df_filtrado.copy()
-        df_cid["Cidade"] = df_cid["Cidade"].fillna("Não Informado").astype(str).str.strip()
-        df_cid = df_cid[df_cid["Cidade"] != ""]
-        resumo_cid = (
-            df_cid.groupby("Cidade")
-            .size()
-            .reset_index(name="Leads")
-            .sort_values("Leads", ascending=False)
-            .head(20)
-        )
-        _barras_card(resumo_cid, "Leads", "Cidade", "Top cidades", "bar_cidades")
-
-    with col_est:
-        if "Telefone" in df_filtrado.columns:
-            df_est = df_filtrado.copy()
-            df_est["Estado_Origem"] = df_est["Telefone"].apply(_obter_estado_ddd)
-            resumo_est = _agrupar(df_est, "Estado_Origem")
-            _barras_card(resumo_est, "Leads", "Estado_Origem", "Estado de Origem (via DDD do Lead)", "bar_estados")
-
     st.write("")
-    # Listas menores lado a lado: Forma de cadastro + Meio de Contato
+    # Forma de cadastro + Finalidade | Meio de Contato
     col_cad, col_orig_cont = st.columns(2)
 
     with col_cad:
@@ -1005,6 +968,31 @@ with aba3:
             df_origcont = df_origcont[df_origcont["OrigemContato"] != ""]
             resumo_origcont = _agrupar(df_origcont, "OrigemContato")
             _barras_card(resumo_origcont, "Leads", "OrigemContato", "Meio de Contato (Origem Contato)", "bar_origem_contato")
+
+# ── Aba 3: Cidades e Cadastro ─────────────────────────────────────────────────
+with aba3:
+    # Listas maiores lado a lado: Top cidades + Estado de Origem
+    col_cid, col_est = st.columns(2)
+
+    with col_cid:
+        df_cid = df_filtrado.copy()
+        df_cid["Cidade"] = df_cid["Cidade"].fillna("Não Informado").astype(str).str.strip()
+        df_cid = df_cid[df_cid["Cidade"] != ""]
+        resumo_cid = (
+            df_cid.groupby("Cidade")
+            .size()
+            .reset_index(name="Leads")
+            .sort_values("Leads", ascending=False)
+            .head(20)
+        )
+        _barras_card(resumo_cid, "Leads", "Cidade", "Top cidades", "bar_cidades")
+
+    with col_est:
+        if "Telefone" in df_filtrado.columns:
+            df_est = df_filtrado.copy()
+            df_est["Estado_Origem"] = df_est["Telefone"].apply(_obter_estado_ddd)
+            resumo_est = _agrupar(df_est, "Estado_Origem")
+            _barras_card(resumo_est, "Leads", "Estado_Origem", "Estado de Origem (via DDD do Lead)", "bar_estados")
 
 # ── Aba 4: Operação ───────────────────────────────────────────────────────────
 with aba4:
@@ -1194,5 +1182,19 @@ with aba5:
         download_filename="leads_crm_detalhe.csv",
         download_label="📥 Baixar CSV"
     )
+
+    # Matriz origem × etapa (crosstab), movida da aba Origem e Campanhas
+    if {"UtmSource", "Etapa_NF"}.issubset(df_filtrado.columns):
+        st.write("")
+        df_mat_orig = df_filtrado.copy()
+        df_mat_orig["UtmSource"] = _resolver_origem(df_mat_orig)
+        df_mat_orig = df_mat_orig.dropna(subset=["Etapa_NF"])
+        if not df_mat_orig.empty:
+            dataframe_card(
+                pd.crosstab(df_mat_orig["UtmSource"], df_mat_orig["Etapa_NF"]),
+                "Matriz origem × etapa",
+                key="matriz_origem_etapa",
+                height=460,
+            )
 
 
