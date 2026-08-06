@@ -71,6 +71,7 @@ def login() -> dict:
 _CAMPOS_DICT_NOME = [
     "FormaCadastro", "Funil", "Etapa", "Status",
     "Responsavel", "OrigemContato", "FinalidadeCompra",
+    "IntencaoCompra",
 ]
 
 def _safe_nome(val) -> str | None:
@@ -322,9 +323,17 @@ def upsert_bq(df: pd.DataFrame) -> None:
     target  = f"{PROJECT_ID}.{DATASET}.{TABELA}"
     staging = f"{PROJECT_ID}.{DATASET}.{TABELA}_staging"
 
-    # Schema parcial: colunas do df que existem no target herdam o tipo dele;
-    # colunas novas (se houver) seguem autodetectadas pelo client.
-    target_schema = [f for f in client.get_table(target).schema if f.name in df.columns]
+    # Colunas do df ausentes no target quebrariam o MERGE (UPDATE SET T.col).
+    # Ignora-as com aviso; para passar a carregá-las, ALTER TABLE no target.
+    table = client.get_table(target)
+    target_cols = {f.name for f in table.schema}
+    extras = sorted(set(df.columns) - target_cols)
+    if extras:
+        print(f"Aviso: colunas sem correspondencia no target ignoradas: {extras}. "
+              f"Para carrega-las, adicione ao target via ALTER TABLE.")
+        df = df.drop(columns=extras)
+
+    target_schema = [f for f in table.schema if f.name in df.columns]
     job_config = bigquery.LoadJobConfig(
         write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
         schema=target_schema,
