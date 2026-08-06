@@ -87,6 +87,11 @@ def carregar_clientes() -> pd.DataFrame:
         # Filter to individual clients (Pessoa Física) as per the original dashboard
         df = df[df['sexo'].isin(['Masculino', 'Feminino'])]
 
+    # Empreendimento (produto): mantém CAPS originais (títulos têm romanos I/II/III
+    # e abreviações); fix_text_values faz replace de substring e corromperia nomes
+    if 'descr_obra' in df.columns:
+        df['descr_obra'] = df['descr_obra'].fillna('Não Informado').astype(str).str.strip()
+
     # Standardize casing
     if 'cidade_cli' in df.columns:
         df['cidade_cli'] = df['cidade_cli'].str.title().str.strip()

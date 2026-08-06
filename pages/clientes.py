@@ -48,6 +48,12 @@ selected_cities = st.sidebar.multiselect("Cidade do Empreendimento (Obra)", opti
 if selected_cities:
     df = df[df['cidade_obra'].isin(selected_cities)]
 
+# 5. Produto (Empreendimento)
+products_list = sorted(list(df_orig['descr_obra'].dropna().unique()))
+selected_products = st.sidebar.multiselect("Produto (Empreendimento)", options=products_list, placeholder="Todos")
+if selected_products:
+    df = df[df['descr_obra'].isin(selected_products)]
+
 # ── Download Button in Sidebar ────────────────────────────────────────────────
 with st.sidebar:
     st.divider()
