@@ -15,6 +15,7 @@ pg = st.navigation([
     st.Page("pages/publya.py",     title="Publya",       icon="📺"),
     st.Page("pages/funil.py",      title="Funil BTSA", icon="📊"),
     st.Page("pages/clientes.py",   title="Análise de Clientes", icon="👤"),
+    st.Page("pages/qrfy.py",       title="QRFY — QR Codes", icon="🔲"),
 ])
 
 # Run the selected page
