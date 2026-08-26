@@ -66,7 +66,7 @@ if df.empty:
 total_leituras = len(df)
 visitantes_unicos = int(df["visitante_unico"].sum())
 qrs_ativos = df["name"].nunique()
-cidades_atingidas = df["city"].nunique()
+cidades_atingidas = df["cidade_qr"].nunique()
 pct_unico = (visitantes_unicos / total_leituras * 100) if total_leituras else 0
 
 kpis({
