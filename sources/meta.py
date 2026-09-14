@@ -12,6 +12,15 @@ _ACTION_COLS = [
     "action__add_to_cart", "action__initiate_checkout",
 ]
 
+# Componentes de lead da Meta. action__lead NAO entra aqui: ele e a metrica
+# consolidada que ja agrega estes tipos de acao.
+_LEAD_COMPONENTES = [
+    "action__lead_gen_form",
+    "action__messaging_lead",
+    "action__contact",
+    "action__schedule",
+]
+
 @st.cache_data(ttl=3600)
 def carregar_dados() -> pd.DataFrame:
     """Loads Meta Ads records with partition key date_start filter from BigQuery."""
@@ -33,7 +42,8 @@ def carregar_dados() -> pd.DataFrame:
     if "date_start" in df.columns:
         df["date_start"] = pd.to_datetime(df["date_start"]).dt.date
 
-    num_cols = ["spend", "impressions", "reach", "clicks", "inline_link_clicks"] + _ACTION_COLS
+    num_cols = (["spend", "impressions", "reach", "clicks", "inline_link_clicks"]
+                + _ACTION_COLS + _LEAD_COMPONENTES)
     for col in num_cols:
         if col in df.columns:
             df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0.0)
@@ -41,15 +51,19 @@ def carregar_dados() -> pd.DataFrame:
     existing_actions = [c for c in _ACTION_COLS if c in df.columns]
     df["conversions"] = df[existing_actions].sum(axis=1) if existing_actions else 0.0
 
-    # Leads = pixel + lead gen form + messaging (WhatsApp/DM) + contact + schedule
-    lead_cols = [c for c in [
-        "action__lead",
-        "action__lead_gen_form",
-        "action__messaging_lead",
-        "action__contact",
-        "action__schedule",
-    ] if c in df.columns]
-    df["leads"] = df[lead_cols].sum(axis=1) if lead_cols else 0.0
+    # Leads — action__lead ja e a metrica consolidada da Meta: ela agrega os leads
+    # de formulario instantaneo, mensagem, contato e agendamento. Somar o agregado
+    # aos seus componentes contava cada lead duas vezes. Usa o agregado e so cai
+    # para a soma dos componentes quando ele vier zerado.
+    comp_cols = [c for c in _LEAD_COMPONENTES if c in df.columns]
+    componentes = (df[comp_cols].sum(axis=1) if comp_cols
+                   else pd.Series(0.0, index=df.index))
+
+    if "action__lead" in df.columns:
+        agregado = df["action__lead"]
+        df["leads"] = agregado.where(agregado > 0, componentes)
+    else:
+        df["leads"] = componentes
 
     # Estoque vs Lançamento
     df["Tipo_Lancamento"] = df["campaign_name"].map(_tipo_lancamento)
