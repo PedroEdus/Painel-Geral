@@ -78,16 +78,23 @@ if tipo_sel != "Todos":
 if campanhas_sel:
     df_filtrado = df_filtrado[df_filtrado["campaign_name"].isin(campanhas_sel)]
 
+def _como_datetime_naive(serie: pd.Series) -> pd.Series:
+    """Garante datetime64 sem timezone (evita InvalidComparison com datas do filtro)."""
+    serie = pd.to_datetime(serie, errors="coerce")
+    if getattr(serie.dt, "tz", None) is not None:
+        serie = serie.dt.tz_localize(None)
+    return serie.dt.normalize()
+
 if data_inicio_sel and "data_inicio" in df_filtrado.columns:
+    col_inicio = _como_datetime_naive(df_filtrado["data_inicio"])
     df_filtrado = df_filtrado[
-        df_filtrado["data_inicio"].isna() |
-        (df_filtrado["data_inicio"].dt.date >= data_inicio_sel)
+        col_inicio.isna() | (col_inicio >= pd.Timestamp(data_inicio_sel))
     ]
 
 if data_fim_sel and "data_fim" in df_filtrado.columns:
+    col_fim = _como_datetime_naive(df_filtrado["data_fim"])
     df_filtrado = df_filtrado[
-        df_filtrado["data_fim"].isna() |
-        (df_filtrado["data_fim"].dt.date <= data_fim_sel)
+        col_fim.isna() | (col_fim <= pd.Timestamp(data_fim_sel))
     ]
 
 st.caption(f"{len(df_filtrado)} campanha(s) exibida(s)")
