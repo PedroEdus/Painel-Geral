@@ -26,6 +26,7 @@ _CIDADES = {
     "Goiânia": "GO", "Gramado": "RS", "Guaíba": "RS", "Guarapuava": "PR",
     "Gurupi": "TO", "Itaboraí": "RJ", "Itaituba": "PA", "Itajaí": "SC",
     "Itapipoca": "CE", "Itatiaia": "RJ", "Ji-Paraná": "RO", "Lorena": "SP",
+    "Luzimangues": "TO",
     "Maceió": "AL", "Marabá": "PA", "Marau": "RS", "Marechal Deodoro": "AL",
     "Montes Claros": "MG", "Nova Serrana": "MG", "Palmas": "TO",
     "Paragominas": "PA", "Parauapebas": "PA", "Pelotas": "RS", "Penedo": "AL",
@@ -36,18 +37,17 @@ _CIDADES = {
     "Santana do Araguaia": "PA", "Santarém": "PA",
     "São Gonçalo do Amarante": "CE", "São Leopoldo": "RS",
     "São Miguel dos Campos": "AL", "São Paulo": "SP", "Sertãozinho": "SP",
-    "Tauá": "CE", "Tucumã": "PA", "Tucuruí": "PA", "Uberaba": "MG",
+    "Taquaralto": "TO", "Tauá": "CE", "Tucumã": "PA", "Tucuruí": "PA", "Uberaba": "MG",
     "Viamão": "RS", "Vila Velha": "ES", "Xinguara": "PA",
 }
 
-# Apelidos, abreviações e bairros/distritos → cidade canônica
+# Apelidos e abreviações → cidade canônica. Taquaralto (Palmas) e Luzimangues
+# (Porto Nacional) ficam como localidades próprias em _CIDADES.
 _APELIDOS = {
     "Presidente": "Presidente Prudente",
     "PP": "Presidente Prudente",
     "São Miguel": "São Miguel dos Campos",
-    "Taquaralto": "Palmas",
-    "Palmas Taquaralto": "Palmas",
-    "Luzimangues": "Porto Nacional",
+    "Palmas Taquaralto": "Taquaralto",
     "Residencial Jardim Tropical Itapipoca": "Itapipoca",
 }
 
