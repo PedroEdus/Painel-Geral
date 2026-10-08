@@ -31,16 +31,16 @@ def _extrair_cidade_uf(nome: str) -> tuple:
         m = _RE_CUF.match(apos)
         if m and m.group(2) in _UF_BR:
             return m.group(1).strip(), m.group(2)
-        return "Não identificado", None
 
     # Padrão 2: "Campanha de ... - Cidade/UF"
-    if re.match(r'^Campanha\b', n, re.IGNORECASE):
+    elif re.match(r'^Campanha\b', n, re.IGNORECASE):
         partes = n.split(' - ', 1)
         if len(partes) > 1:
             m = _RE_CUF.match(partes[1].strip())
             if m and m.group(2) in _UF_BR:
                 return m.group(1).strip(), m.group(2)
-        return "Não identificado", None
+
+    # Padrões 1 e 2 sem match seguem para o catch-all (Padrão 4)
 
     # Padrão 3: "Cidade/UF - ..."
     m = _RE_CUF.match(n)

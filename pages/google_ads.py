@@ -70,7 +70,7 @@ if sel_conta:
 ufs_opts = sorted(df_orig["UF"].dropna().unique())
 sel_uf = st.sidebar.multiselect("UF", ufs_opts, placeholder="Todas")
 if sel_uf:
-    df = df[df["UF"].isin(sel_uf) | df["UF"].isna()]
+    df = df[df["UF"].isin(sel_uf)]
 
 # 5. Cidade (cascateia após UF)
 df_para_cidade = df_orig[df_orig["UF"].isin(sel_uf)] if sel_uf else df_orig
@@ -80,7 +80,7 @@ cidades_opts = sorted(
 )
 sel_cidade = st.sidebar.multiselect("Cidade", cidades_opts, placeholder="Todas")
 if sel_cidade:
-    df = df[df["Cidade"].isin(sel_cidade) | (df["Cidade"] == "Não identificado") | df["Cidade"].isna()]
+    df = df[df["Cidade"].isin(sel_cidade)]
 
 # 6. Campanha
 campanhas_opts = sorted(df["campaign_name"].dropna().unique())
